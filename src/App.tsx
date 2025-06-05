@@ -15,8 +15,8 @@ function App() {
 
   const [account, setAccount] = useState<string>('');
   const [balance, setBalance] = useState<string>('0');
-  const [recipient, setRecipient] = useState<string>('');
-  const [amount, setAmount] = useState<string>('');
+  const [recipient, setRecipient] = useState<string>('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
+  const [amount, setAmount] = useState<string>('0.1');
   const [loading, setLoading] = useState<boolean>(false);
 
   // TronWeb 实例
