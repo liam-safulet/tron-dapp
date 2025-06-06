@@ -1,276 +1,359 @@
 import './App.css'
-import { useState, useEffect } from 'react'
-import { TronWeb } from 'tronweb';
+import {useState, useEffect} from 'react'
+import {TronWeb} from 'tronweb';
 
 declare global {
-  interface Window {
-    binancew3w: {
-      tron: any
-    },
-  }
+    interface Window {
+        tronLink: {
+            ready: boolean;
+            request: (params: any) => Promise<any>;
+            tronWeb: any;
+        }
+    }
 }
 
 const tronWeb = new TronWeb({
-  fullHost: 'https://api.trongrid.io', // 主网
-  // fullHost: 'https://api.nileex.io', // 测试网
+    fullHost: 'https://api.trongrid.io', // 主网
+    // fullHost: 'https://api.nileex.io', // 测试网
 });
 
 function App() {
-  const tronProvider = window.binancew3w.tron;
-  const provider = tronProvider
-  const [account, setAccount] = useState<string>('');
-  const [balance, setBalance] = useState<string>('0');
-  const [recipient, setRecipient] = useState<string>('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
-  const [amount, setAmount] = useState<string>('0.1');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [signedData, setSignedData] = useState<string>('');
+    const [account, setAccount] = useState<string>('');
+    const [balance, setBalance] = useState<string>('0');
+    const [loading, setLoading] = useState<boolean>(false);
+    const [signedData, setSignedData] = useState<string>('');
+    const [recipient, setRecipient] = useState<string>('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
+    const [amount, setAmount] = useState<string>('0.1');
 
-  // 示例合约地址 (USDT-TRC20)
-  const CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-  
-  // 合约 function selector
-  const TRANSFER_FUNCTION_SELECTOR = '0xa9059cbb';
 
-  useEffect(() => {
-    // 初始化 provider
-    const initProvider = async () => {
-      try {
-        // 检查是否已连接
+    // USDT TRC20 合约地址
+    const CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+    // transfer(address,uint256) 函数选择器
+    const TRANSFER_FUNCTION_SELECTOR = 'a9059cbb';
+
+    useEffect(() => {
+        checkWalletConnection();
+    }, []);
+
+    // 检查钱包连接状态
+    const checkWalletConnection = async () => {
         try {
-          const { address } = await tronProvider.getAccount();
-          if (address) {
-            setAccount(address);
-            const balance = await tronWeb.trx.getBalance(address);
-            setBalance(String(tronWeb.fromSun(balance)));
-          }
+            if (window.tronLink && window.tronLink.ready) {
+                if (window.tronLink.tronWeb && window.tronLink.tronWeb.defaultAddress.base58) {
+                    const address = window.tronLink.tronWeb.defaultAddress.base58;
+                    setAccount(address);
+                    await getBalance(address);
+                }
+            }
         } catch (error) {
-          console.log('Not connected yet', error);
+            console.log('Wallet not connected:', error);
         }
-      } catch (error) {
-        console.error('Error initializing provider:', error);
-      }
     };
 
-    initProvider();
-  }, []);
+    // 获取余额
+    const getBalance = async (address: string) => {
+        try {
+            const balance = await tronWeb.trx.getBalance(address);
+            setBalance(tronWeb.fromSun(balance));
+        } catch (error) {
+            console.error('Error getting balance:', error);
+        }
+    };
 
-  // 连接钱包
-  const connectWallet = async () => {
-    try {
-      if (!tronProvider) {
-        alert('Provider not initialized');
-        return;
-      }
+    // 连接钱包
+    const connectWallet = async () => {
+        try {
+            if (!window.tronLink) {
+                alert('请先安装 TronLink 钱包插件');
+                return;
+            }
 
-      setLoading(true);
-      const { address } = await tronProvider.getAccount();
-      setAccount(address);
+            setLoading(true);
+            
+            const result = await window.tronLink.request({
+                method: 'tron_requestAccounts'
+            });
 
-      // 获取余额
-      const balance = await tronWeb.trx.getBalance(address);
-      setBalance(String(tronWeb.fromSun(balance)));
-    } catch (error) {
-      console.error('Error connecting wallet:', error);
-      alert('Failed to connect wallet');
-    } finally {
-      setLoading(false);
-    }
-  };
+            if (result.code === 200) {
+                const address = window.tronLink.tronWeb.defaultAddress.base58;
+                setAccount(address);
+                await getBalance(address);
+            } else {
+                throw new Error('连接失败');
+            }
+        } catch (error) {
+            console.error('连接钱包失败:', error);
+            alert('连接钱包失败');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  // 断开连接
-  const disconnectWallet = async () => {
-    try {
-      if (tronProvider) {
-        await tronProvider.disconnect();
+    // 断开连接
+    const disconnectWallet = () => {
         setAccount('');
         setBalance('0');
+        setSignedData('');
         setRecipient('');
-        setAmount('');
-      }
-    } catch (error) {
-      console.error('Error disconnecting:', error);
-    }
-  };
+        setAmount('1');
+        alert('钱包已断开连接');
+    };
 
-  // 构建触发智能合约的交易
-  const buildTriggerSmartContractTx = async (
-    contractAddress: string,
-    functionSelector: string,
-    _parameter: string,
-    feeLimit: number = 100000000
-  ) => {
-    try {
-      // 构建合约调用参数
-      const parameter = {
-        contract_address: contractAddress,
-        function_selector: functionSelector,
-        parameter: _parameter,
-        fee_limit: feeLimit,
-        call_value: 0, // 如果需要发送 TRX，在这里设置数量
-        owner_address: account
-      };
+    // 构建智能合约交易参数 - 使用对象数组格式
+    const buildContractParameters = (recipientAddress: string, transferAmount: string) => {
+        const amountInWei = Number(transferAmount) * 1000000; // USDT 有 6 位小数
+        return [
+            { type: 'address', value: recipientAddress },
+            { type: 'uint256', value: amountInWei }
+        ];
+    };
 
-      // 构建交易
-      const transaction = {
-        visible: false,
-        txID: '',
-        raw_data: {
-          contract: [{
-            parameter: {
-              value: parameter,
-              type_url: 'type.googleapis.com/protocol.TriggerSmartContract'
-            },
-            type: 'TriggerSmartContract'
-          }],
-          ref_block_bytes: '0000',
-          ref_block_hash: '0000000000000000',
-          expiration: Date.now() + 60 * 60 * 1000, // 1小时过期
-          timestamp: Date.now(),
-        },
-        raw_data_hex: ''
-      };
+    // 只签名智能合约交易
+    const signTransaction = async () => {
+        if (!account || !recipient || !amount) {
+            alert('请填写完整信息');
+            return;
+        }
 
-      return transaction;
-    } catch (error) {
-      console.error('Error building transaction:', error);
-      throw error;
-    }
-  };
+        try {
+            setLoading(true);
 
-  // 只签名智能合约交易
-  const handleSignTransaction = async () => {
-    if (!provider || !account || !recipient || !amount) {
-      alert('Please fill in all fields');
-      return;
-    }
+            // 构建合约调用参数 - 现在返回对象数组
+            const parameter = buildContractParameters(recipient, amount);
+            console.log('parameter:', parameter);
 
-    try {
-      setLoading(true);
+            // 构建 triggerSmartContract 交易
+            const transaction = await window.tronLink.tronWeb.transactionBuilder.triggerSmartContract(
+                CONTRACT_ADDRESS,
+                TRANSFER_FUNCTION_SELECTOR,
+                {
+                    feeLimit: 50000000, // 50 TRX 费用限制
+                    callValue: 0, // 不发送 TRX
+                },
+                parameter,  // 对象数组格式的参数
+                account
+            );
 
-      // 构建参数
-      // 对于 TRC20 transfer，参数格式为: transfer(address,uint256)
-      const encodedAddress = tronWeb.address.toHex(recipient).replace('0x', '').padStart(64, '0');
-      const encodedAmount = tronWeb.toHex(Number(amount) * 1e6).replace('0x', '').padStart(64, '0');
-      const parameter = encodedAddress + encodedAmount;
+            console.log('Transaction result:', transaction);
 
-      // 构建交易
-      const transaction = await buildTriggerSmartContractTx(
-        CONTRACT_ADDRESS,
-        TRANSFER_FUNCTION_SELECTOR,
-        parameter
-      );
+            if (!transaction.result || !transaction.result.result) {
+                throw new Error('构建交易失败: ' + JSON.stringify(transaction.result));
+            }
 
-      // 只签名交易
-      const signedTx = await provider.signTransaction(transaction);
-      setSignedData(JSON.stringify(signedTx, null, 2));
-      alert('Transaction signed successfully!');
-    } catch (error) {
-      console.error('Transaction signing failed:', error);
-      alert('Failed to sign transaction');
-    } finally {
-      setLoading(false);
-    }
-  };
+            console.log('About to sign:', transaction.transaction);
+            // 只签名，不发送
+            const signedTx = await window.tronLink.tronWeb.trx.sign(transaction.transaction);
+            
+            setSignedData(JSON.stringify(signedTx, null, 2));
+            alert('智能合约交易签名成功！');
+        } catch (error) {
+            console.error('签名失败:', error);
+            alert('签名失败: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  // 签名并发送智能合约交易
-  const handleSignAndSendTransaction = async () => {
-    if (!provider || !account || !recipient || !amount) {
-      alert('Please fill in all fields');
-      return;
-    }
+    // 签名并发送智能合约交易
+    const signAndSendTransaction = async () => {
+        if (!account || !recipient || !amount) {
+            alert('请填写完整信息');
+            return;
+        }
 
-    try {
-      setLoading(true);
+        try {
+            setLoading(true);
 
-      // 构建参数
-      const encodedAddress = tronWeb.address.toHex(recipient).replace('0x', '').padStart(64, '0');
-      const encodedAmount = tronWeb.toHex(Number(amount) * 1e6).replace('0x', '').padStart(64, '0');
-      const parameter = encodedAddress + encodedAmount;
+            // 构建合约调用参数 - 现在返回对象数组
+            const parameter = buildContractParameters(recipient, amount);
 
-      // 构建交易
-      const transaction = await buildTriggerSmartContractTx(
-        CONTRACT_ADDRESS,
-        TRANSFER_FUNCTION_SELECTOR,
-        parameter
-      );
+            // 构建 triggerSmartContract 交易
+            const transaction = await window.tronLink.tronWeb.transactionBuilder.triggerSmartContract(
+                CONTRACT_ADDRESS,
+                TRANSFER_FUNCTION_SELECTOR,
+                {
+                    feeLimit: 50000000, // 50 TRX 费用限制
+                    callValue: 0, // 不发送 TRX
+                },
+                parameter,  // 对象数组格式的参数
+                account
+            );
 
-      // 签名并发送交易
-      const result = await provider.signAndSendTransaction(transaction);
-      
-      alert('Transaction sent! Hash: ' + result.txid);
-      setSignedData(JSON.stringify(result, null, 2));
+            if (!transaction.result || !transaction.result.result) {
+                throw new Error('构建交易失败: ' + JSON.stringify(transaction.result));
+            }
 
-    } catch (error) {
-      console.error('Transaction failed:', error);
-      alert('Transaction failed. Please check the console for details.');
-    } finally {
-      setLoading(false);
-    }
-  };
+            // 签名交易
+            const signedTx = await window.tronLink.tronWeb.trx.sign(transaction.transaction);
+            
+            // 发送交易
+            const result = await window.tronLink.tronWeb.trx.sendRawTransaction(signedTx);
+            
+            if (result.result) {
+                setSignedData(JSON.stringify(result, null, 2));
+                alert('智能合约交易发送成功！交易哈希: ' + result.txid);
+                // 更新余额
+                await getBalance(account);
+            } else {
+                throw new Error('交易发送失败: ' + (result.message || '未知错误'));
+            }
+        } catch (error) {
+            console.error('交易失败:', error);
+            alert('交易失败: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <div className="App">
-      <h1>Tron Smart Contract Interaction</h1>
-      
-      {!account ? (
-        <button onClick={connectWallet} disabled={loading}>
-          {loading ? 'Connecting...' : 'Connect Wallet'}
-        </button>
-      ) : (
-        <div>
-          <div className="wallet-info">
-            <div>
-              <p>Account: {account}</p>
-              <p>Balance: {balance} TRX</p>
-            </div>
-            <button 
-              onClick={disconnectWallet}
-              className="disconnect-button"
-            >
-              Disconnect
-            </button>
-          </div>
+    return (
+        <div className="App" style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+            <h1>TronLink 智能合约 dApp</h1>
+            
+            {!account ? (
+                <div style={{ textAlign: 'center', marginTop: '50px' }}>
+                    <button 
+                        onClick={connectWallet} 
+                        disabled={loading}
+                        style={{ 
+                            padding: '12px 24px', 
+                            fontSize: '16px', 
+                            backgroundColor: '#007bff', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '6px',
+                            cursor: loading ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        {loading ? '连接中...' : '连接 TronLink 钱包'}
+                    </button>
+                </div>
+            ) : (
+                <div>
+                    {/* 钱包信息 */}
+                    <div style={{ 
+                        padding: '15px',
+                        borderRadius: '8px', 
+                        marginBottom: '20px' 
+                    }}>
+                        <h3>钱包信息</h3>
+                        <p><strong>地址:</strong> {account}</p>
+                        <p><strong>TRX 余额:</strong> {balance} TRX</p>
+                        <button 
+                            onClick={disconnectWallet}
+                            style={{ 
+                                padding: '8px 16px', 
+                                backgroundColor: '#dc3545', 
+                                color: 'white', 
+                                border: 'none', 
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            断开连接
+                        </button>
+                    </div>
 
-          <div className="contract-form">
-            <h2>Contract Interaction (USDT Transfer)</h2>
-            <input
-              type="text"
-              placeholder="Recipient Address"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-            />
-            <input
-              type="number"
-              placeholder="Amount (USDT)"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-            <div className="button-group">
-              <button 
-                onClick={handleSignTransaction}
-                disabled={loading}
-              >
-                Sign Only
-              </button>
-              <button 
-                onClick={handleSignAndSendTransaction}
-                disabled={loading}
-              >
-                Sign & Send
-              </button>
-            </div>
-          </div>
+                    {/* 智能合约交易表单 */}
+                    <div style={{ 
+                        backgroundColor: '#f8f9fa', 
+                        padding: '15px', 
+                        borderRadius: '8px', 
+                        marginBottom: '20px' 
+                    }}>
+                        <h3>USDT 转账 (TRC20)</h3>
+                        <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                            合约地址: {CONTRACT_ADDRESS}
+                        </p>
+                        
+                        <div style={{ marginBottom: '15px' }}>
+                            <label>接收地址:</label>
+                            <input
+                                type="text"
+                                value={recipient}
+                                onChange={(e) => setRecipient(e.target.value)}
+                                placeholder="输入接收地址"
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '8px', 
+                                    marginTop: '5px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #ddd'
+                                }}
+                            />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label>金额 (USDT):</label>
+                            <input
+                                type="number"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                                placeholder="输入金额"
+                                step="0.000001"
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '8px', 
+                                    marginTop: '5px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #ddd'
+                                }}
+                            />
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button 
+                                onClick={signTransaction}
+                                disabled={loading}
+                                style={{ 
+                                    flex: 1,
+                                    padding: '10px', 
+                                    backgroundColor: '#28a745', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {loading ? '处理中...' : '仅签名交易'}
+                            </button>
+                            <button 
+                                onClick={signAndSendTransaction}
+                                disabled={loading}
+                                style={{ 
+                                    flex: 1,
+                                    padding: '10px', 
+                                    backgroundColor: '#007bff', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '4px',
+                                    cursor: loading ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {loading ? '处理中...' : '签名并发送'}
+                            </button>
+                        </div>
+                    </div>
 
-          {signedData && (
-            <div className="signed-data">
-              <h3>Transaction Data:</h3>
-              <pre>{signedData}</pre>
-            </div>
-          )}
+                    {/* 交易数据显示 */}
+                    {signedData && (
+                        <div style={{ 
+                            padding: '15px',
+                            borderRadius: '8px' 
+                        }}>
+                            <h3>智能合约交易数据</h3>
+                            <pre style={{ 
+                                padding: '10px',
+                                borderRadius: '4px',
+                                overflow: 'auto',
+                                fontSize: '12px'
+                            }}>
+                                {signedData}
+                            </pre>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
 export default App
