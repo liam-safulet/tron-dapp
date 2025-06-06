@@ -4,16 +4,28 @@ import {TronWeb} from 'tronweb';
 
 declare global {
     interface Window {
-        binancew3w: {
+        binancew3w?: {
             tron: {
                 getAccount(): Promise<{ address: string }>;
-                signMessage(message: string): Promise<any>;
-                signTransaction(tx: any): Promise<any>;
-                signAndSendTransaction(tx: any): Promise<any>;
-                disconnect(): Promise<any>;
+                signMessage(message: string): Promise<string>;
+                signTransaction(tx: unknown): Promise<unknown>;
+                signAndSendTransaction(tx: unknown): Promise<{ txid?: string; result?: boolean }>;
+                disconnect(): Promise<void>;
             }
         }
     }
+}
+
+interface TronTransaction {
+    result?: {
+        result?: boolean;
+    };
+    transaction?: unknown;
+}
+
+interface ContractParameter {
+    type: string;
+    value: string | number;
 }
 
 const tronWeb = new TronWeb({
@@ -39,13 +51,18 @@ function App() {
     const TRANSFER_FUNCTION_SELECTOR = 'a9059cbb';
 
     useEffect(() => {
-        checkWalletConnection();
+        const initialize = async () => {
+            await checkWalletConnection();
+        };
+        initialize().catch((error) => {
+            console.error('Initialization error:', error);
+        });
     }, []);
 
     // 检查钱包连接状态
-    const checkWalletConnection = async () => {
+    const checkWalletConnection = async (): Promise<void> => {
         try {
-            if (window.binancew3w && window.binancew3w.tron) {
+            if (window.binancew3w?.tron) {
                 // 尝试获取账户信息
                 const { address } = await window.binancew3w.tron.getAccount();
                 if (address) {
@@ -54,24 +71,25 @@ function App() {
                 }
             }
         } catch (error) {
-            console.log('Wallet not connected:', error);
+            console.log(error);
+            // 静默处理连接检查错误，因为钱包可能未连接
         }
     };
 
     // 获取余额
-    const getBalance = async (address: string) => {
+    const getBalance = async (address: string): Promise<void> => {
         try {
-            const balance = await tronWeb.trx.getBalance(address);
-            setBalance(tronWeb.fromSun(balance));
+            const balanceResult = await tronWeb.trx.getBalance(address);
+            setBalance(String(tronWeb.fromSun(balanceResult)));
         } catch (error) {
             console.error('Error getting balance:', error);
         }
     };
 
     // 连接钱包
-    const connectWallet = async () => {
+    const connectWallet = async (): Promise<void> => {
         try {
-            if (!window.binancew3w || !window.binancew3w.tron) {
+            if (!window.binancew3w?.tron) {
                 alert('请先安装 Binance Web3 Wallet');
                 return;
             }
@@ -90,34 +108,36 @@ function App() {
             }
         } catch (error) {
             console.error('连接钱包失败:', error);
-            alert('连接钱包失败: ' + error.message);
+            const errorMessage = error instanceof Error ? error.message : '未知错误';
+            alert('连接钱包失败: ' + errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
     // 断开连接
-    const disconnectWallet = async () => {
+    const disconnectWallet = async (): Promise<void> => {
         try {
-            if (window.binancew3w && window.binancew3w.tron) {
+            if (window.binancew3w?.tron) {
                 await window.binancew3w.tron.disconnect();
             }
             setAccount('');
             setBalance('0');
             setSignedData('');
             setSignedMessage('');
-            setRecipient('');
+            setRecipient('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
             setAmount('0.1');
             setMessage('Hello, Binance W3W!');
             alert('钱包已断开连接');
         } catch (error) {
             console.error('断开连接失败:', error);
-            alert('断开连接失败: ' + error.message);
+            const errorMessage = error instanceof Error ? error.message : '未知错误';
+            alert('断开连接失败: ' + errorMessage);
         }
     };
 
     // 构建智能合约交易参数 - 使用对象数组格式
-    const buildContractParameters = (recipientAddress: string, transferAmount: string) => {
+    const buildContractParameters = (recipientAddress: string, transferAmount: string): ContractParameter[] => {
         const amountInWei = Number(transferAmount) * 1000000; // USDT 有 6 位小数
         return [
             { type: 'address', value: recipientAddress },
@@ -126,12 +146,12 @@ function App() {
     };
 
     // 构建交易对象
-    const buildTransaction = async (recipientAddress: string, transferAmount: string) => {
+    const buildTransaction = async (recipientAddress: string, transferAmount: string): Promise<unknown> => {
         try {
             const parameter = buildContractParameters(recipientAddress, transferAmount);
             
             // 使用 TronWeb 构建交易
-            const transaction = await tronWeb.transactionBuilder.triggerSmartContract(
+            const transaction: TronTransaction = await tronWeb.transactionBuilder.triggerSmartContract(
                 CONTRACT_ADDRESS,
                 TRANSFER_FUNCTION_SELECTOR,
                 {
@@ -142,7 +162,7 @@ function App() {
                 account
             );
 
-            if (!transaction.result || !transaction.result.result) {
+            if (!transaction.result?.result) {
                 throw new Error('构建交易失败: ' + JSON.stringify(transaction.result));
             }
 
@@ -154,7 +174,7 @@ function App() {
     };
 
     // 签名消息
-    const signMessage = async () => {
+    const signMessage = async (): Promise<void> => {
         if (!account || !message.trim()) {
             alert('请确保钱包已连接且消息不为空');
             return;
@@ -163,12 +183,10 @@ function App() {
         try {
             setLoading(true);
 
-            if (!window.binancew3w || !window.binancew3w.tron) {
+            if (!window.binancew3w?.tron) {
                 throw new Error('钱包未连接');
             }
 
-            console.log('Signing message:', message);
-            
             // 使用新的 provider 签名消息
             const result = await window.binancew3w.tron.signMessage(message);
             
@@ -185,14 +203,15 @@ function App() {
             
         } catch (error) {
             console.error('消息签名失败:', error);
-            alert('消息签名失败: ' + error.message);
+            const errorMessage = error instanceof Error ? error.message : '未知错误';
+            alert('消息签名失败: ' + errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
     // 只签名智能合约交易
-    const signTransaction = async () => {
+    const signTransaction = async (): Promise<void> => {
         if (!account || !recipient || !amount) {
             alert('请填写完整信息');
             return;
@@ -201,13 +220,12 @@ function App() {
         try {
             setLoading(true);
 
-            if (!window.binancew3w || !window.binancew3w.tron) {
+            if (!window.binancew3w?.tron) {
                 throw new Error('钱包未连接');
             }
 
             // 构建交易
             const transaction = await buildTransaction(recipient, amount);
-            console.log('Transaction to sign:', transaction);
 
             // 使用新的 provider 签名交易
             const signedTx = await window.binancew3w.tron.signTransaction(transaction);
@@ -216,14 +234,15 @@ function App() {
             alert('智能合约交易签名成功！');
         } catch (error) {
             console.error('签名失败:', error);
-            alert('签名失败: ' + error.message);
+            const errorMessage = error instanceof Error ? error.message : '未知错误';
+            alert('签名失败: ' + errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
     // 签名并发送智能合约交易
-    const signAndSendTransaction = async () => {
+    const signAndSendTransaction = async (): Promise<void> => {
         if (!account || !recipient || !amount) {
             alert('请填写完整信息');
             return;
@@ -232,28 +251,44 @@ function App() {
         try {
             setLoading(true);
 
-            if (!window.binancew3w || !window.binancew3w.tron) {
+            if (!window.binancew3w?.tron) {
                 throw new Error('钱包未连接');
             }
 
             // 构建交易
             const transaction = await buildTransaction(recipient, amount);
-            console.log('Transaction to sign and send:', transaction);
 
             // 使用新的 provider 签名并发送交易
             const result = await window.binancew3w.tron.signAndSendTransaction(transaction);
             
             setSignedData(JSON.stringify(result, null, 2));
-            alert('智能合约交易发送成功！');
             
-            // 更新余额
-            await getBalance(account);
+            if (result.result) {
+                alert('智能合约交易发送成功！');
+                // 更新余额
+                await getBalance(account);
+            } else {
+                alert('交易发送失败');
+            }
         } catch (error) {
             console.error('交易失败:', error);
-            alert('交易失败: ' + error.message);
+            const errorMessage = error instanceof Error ? error.message : '未知错误';
+            alert('交易失败: ' + errorMessage);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleRecipientChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+        setRecipient(e.target.value);
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+        setAmount(e.target.value);
+    };
+
+    const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+        setMessage(e.target.value);
     };
 
     return (
@@ -321,7 +356,7 @@ function App() {
                             <label>要签名的消息:</label>
                             <textarea
                                 value={message}
-                                onChange={(e) => setMessage(e.target.value)}
+                                onChange={handleMessageChange}
                                 placeholder="输入要签名的消息"
                                 rows={3}
                                 style={{ 
@@ -368,7 +403,7 @@ function App() {
                             <input
                                 type="text"
                                 value={recipient}
-                                onChange={(e) => setRecipient(e.target.value)}
+                                onChange={handleRecipientChange}
                                 placeholder="输入接收地址"
                                 style={{ 
                                     width: '100%', 
@@ -384,7 +419,7 @@ function App() {
                             <input
                                 type="number"
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
+                                onChange={handleAmountChange}
                                 placeholder="输入金额"
                                 step="0.000001"
                                 style={{ 
