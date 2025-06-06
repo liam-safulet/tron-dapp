@@ -10,6 +10,11 @@ declare global {
   }
 }
 
+const tronWeb = new TronWeb({
+  fullHost: 'https://api.trongrid.io', // 主网
+  // fullHost: 'https://api.nileex.io', // 测试网
+});
+
 function App() {
   const tronProvider = window.binancew3w.tron;
   const provider = tronProvider
@@ -17,15 +22,14 @@ function App() {
   const [balance, setBalance] = useState<string>('0');
   const [recipient, setRecipient] = useState<string>('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
   const [amount, setAmount] = useState<string>('0.1');
-  const [message, setMessage] = useState<string>('');
-  const [signedData, setSignedData] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [signedData, setSignedData] = useState<string>('');
 
-  // TronWeb 实例
-  const tronWeb = new TronWeb({
-    fullHost: 'https://api.trongrid.io', // 主网
-    // fullHost: 'https://api.nileex.io', // 测试网
-  });
+  // 示例合约地址 (USDT-TRC20)
+  const CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+  
+  // 合约 function selector
+  const TRANSFER_FUNCTION_SELECTOR = '0xa9059cbb';
 
   useEffect(() => {
     // 初始化 provider
@@ -73,43 +77,6 @@ function App() {
     }
   };
 
-  // 转账
-  const handleTransfer = async () => {
-    if (!account || !recipient || !amount) {
-      alert('Please fill in all fields');
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // 构建交易
-      const transaction = await tronWeb.transactionBuilder.sendTrx(
-        recipient,
-        Number(tronWeb.toSun(Number(amount))),
-        account
-      );
-
-      // 签名并发送交易
-      const signedTx = await tronProvider.signAndSendTransaction(transaction);
-      
-      alert('Transfer successful! Transaction ID: ' + signedTx.txid);
-
-      // 更新余额
-      const newBalance = await tronWeb.trx.getBalance(account);
-      setBalance(String(tronWeb.fromSun(newBalance)));
-
-      // 清空输入
-      setRecipient('');
-      setAmount('');
-    } catch (error) {
-      console.error('Transfer failed:', error);
-      alert('Transfer failed. Please check the console for details.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 断开连接
   const disconnectWallet = async () => {
     try {
@@ -125,27 +92,52 @@ function App() {
     }
   };
 
-  // 新增：签名消息
-  const handleSignMessage = async () => {
-    if (!provider || !message) {
-      alert('Please enter a message to sign');
-      return;
-    }
-
+  // 构建触发智能合约的交易
+  const buildTriggerSmartContractTx = async (
+    contractAddress: string,
+    functionSelector: string,
+    _parameter: string,
+    feeLimit: number = 100000000
+  ) => {
     try {
-      setLoading(true);
-      const signedMsg = await provider.signMessage(message);
-      setSignedData(JSON.stringify(signedMsg, null, 2));
-      alert('Message signed successfully!');
+      // 构建合约调用参数
+      const parameter = {
+        contract_address: contractAddress,
+        function_selector: functionSelector,
+        parameter: _parameter,
+        fee_limit: feeLimit,
+        call_value: 0, // 如果需要发送 TRX，在这里设置数量
+        owner_address: account
+      };
+
+      // 构建交易
+      const transaction = {
+        visible: false,
+        txID: '',
+        raw_data: {
+          contract: [{
+            parameter: {
+              value: parameter,
+              type_url: 'type.googleapis.com/protocol.TriggerSmartContract'
+            },
+            type: 'TriggerSmartContract'
+          }],
+          ref_block_bytes: '0000',
+          ref_block_hash: '0000000000000000',
+          expiration: Date.now() + 60 * 60 * 1000, // 1小时过期
+          timestamp: Date.now(),
+        },
+        raw_data_hex: ''
+      };
+
+      return transaction;
     } catch (error) {
-      console.error('Signing failed:', error);
-      alert('Failed to sign message');
-    } finally {
-      setLoading(false);
+      console.error('Error building transaction:', error);
+      throw error;
     }
   };
 
-  // 新增：只签名交易，不广播
+  // 只签名智能合约交易
   const handleSignTransaction = async () => {
     if (!provider || !account || !recipient || !amount) {
       alert('Please fill in all fields');
@@ -155,11 +147,17 @@ function App() {
     try {
       setLoading(true);
 
+      // 构建参数
+      // 对于 TRC20 transfer，参数格式为: transfer(address,uint256)
+      const encodedAddress = tronWeb.address.toHex(recipient).replace('0x', '').padStart(64, '0');
+      const encodedAmount = tronWeb.toHex(Number(amount) * 1e6).replace('0x', '').padStart(64, '0');
+      const parameter = encodedAddress + encodedAmount;
+
       // 构建交易
-      const transaction = await tronWeb.transactionBuilder.sendTrx(
-        recipient,
-        Number(tronWeb.toSun(Number(amount))),
-        account
+      const transaction = await buildTriggerSmartContractTx(
+        CONTRACT_ADDRESS,
+        TRANSFER_FUNCTION_SELECTOR,
+        parameter
       );
 
       // 只签名交易
@@ -174,15 +172,48 @@ function App() {
     }
   };
 
+  // 签名并发送智能合约交易
+  const handleSignAndSendTransaction = async () => {
+    if (!provider || !account || !recipient || !amount) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 构建参数
+      const encodedAddress = tronWeb.address.toHex(recipient).replace('0x', '').padStart(64, '0');
+      const encodedAmount = tronWeb.toHex(Number(amount) * 1e6).replace('0x', '').padStart(64, '0');
+      const parameter = encodedAddress + encodedAmount;
+
+      // 构建交易
+      const transaction = await buildTriggerSmartContractTx(
+        CONTRACT_ADDRESS,
+        TRANSFER_FUNCTION_SELECTOR,
+        parameter
+      );
+
+      // 签名并发送交易
+      const result = await provider.signAndSendTransaction(transaction);
+      
+      alert('Transaction sent! Hash: ' + result.txid);
+      setSignedData(JSON.stringify(result, null, 2));
+
+    } catch (error) {
+      console.error('Transaction failed:', error);
+      alert('Transaction failed. Please check the console for details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="App">
-      <h1>Tron DApp</h1>
+      <h1>Tron Smart Contract Interaction</h1>
       
       {!account ? (
-        <button 
-          onClick={connectWallet} 
-          disabled={loading}
-        >
+        <button onClick={connectWallet} disabled={loading}>
           {loading ? 'Connecting...' : 'Connect Wallet'}
         </button>
       ) : (
@@ -199,27 +230,9 @@ function App() {
               Disconnect
             </button>
           </div>
-          
-          {/* 消息签名部分 */}
-          <div className="sign-form">
-            <h2>Sign Message</h2>
-            <input
-              type="text"
-              placeholder="Enter message to sign"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <button 
-              onClick={handleSignMessage}
-              disabled={loading || !message}
-            >
-              Sign Message
-            </button>
-          </div>
 
-          {/* 交易签名部分 */}
-          <div className="transfer-form">
-            <h2>Sign Transaction</h2>
+          <div className="contract-form">
+            <h2>Contract Interaction (USDT Transfer)</h2>
             <input
               type="text"
               placeholder="Recipient Address"
@@ -228,7 +241,7 @@ function App() {
             />
             <input
               type="number"
-              placeholder="Amount (TRX)"
+              placeholder="Amount (USDT)"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
@@ -240,7 +253,7 @@ function App() {
                 Sign Only
               </button>
               <button 
-                onClick={handleTransfer}
+                onClick={handleSignAndSendTransaction}
                 disabled={loading}
               >
                 Sign & Send
@@ -248,10 +261,9 @@ function App() {
             </div>
           </div>
 
-          {/* 显示签名结果 */}
           {signedData && (
             <div className="signed-data">
-              <h3>Signed Data:</h3>
+              <h3>Transaction Data:</h3>
               <pre>{signedData}</pre>
             </div>
           )}
