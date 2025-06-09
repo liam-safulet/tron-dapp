@@ -1,6 +1,6 @@
 import './App.css'
 import {useState, useEffect, useCallback} from 'react'
-import {TronWeb, Trx} from 'tronweb';
+import {TronWeb} from 'tronweb';
 
 declare global {
     interface Window {
