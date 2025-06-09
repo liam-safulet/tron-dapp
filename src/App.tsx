@@ -209,11 +209,6 @@ function App() {
             
             setSignedData(JSON.stringify(result, null, 2));
             
-            if (isValidSignature) {
-                alert('智能合约交易签名成功！签名验证通过。');
-            } else {
-                alert('智能合约交易签名完成，但签名验证失败！');
-            }
         } catch (error) {
             console.error('签名失败:', error);
             const errorMessage = error instanceof Error ? error.message : '未知错误';
@@ -364,12 +359,6 @@ function App() {
             };
             
             setSignedMessage(JSON.stringify(signatureData, null, 2));
-            
-            if (isValidSignature) {
-                alert('消息签名成功！签名验证通过。');
-            } else {
-                alert('消息签名完成，但签名验证失败！');
-            }
             
         } catch (error) {
             console.error('消息签名失败:', error);
@@ -614,6 +603,17 @@ function App() {
                             marginBottom: '20px'
                         }}>
                             <h3>消息签名结果</h3>
+                            {/* 添加验证状态指示器 */}
+                            <div style={{ 
+                                marginBottom: '10px',
+                                padding: '8px',
+                                borderRadius: '4px',
+                                backgroundColor: JSON.parse(signedMessage).signatureValid ? '#d4edda' : '#f8d7da',
+                                color: JSON.parse(signedMessage).signatureValid ? '#155724' : '#721c24',
+                                fontWeight: 'bold'
+                            }}>
+                                {JSON.parse(signedMessage).verificationResult}
+                            </div>
                             <pre style={{ 
                                 backgroundColor: '#e9ecef', 
                                 padding: '10px',
@@ -634,6 +634,17 @@ function App() {
                             borderRadius: '8px' 
                         }}>
                             <h3>智能合约交易数据</h3>
+                            {/* 添加验证状态指示器 */}
+                            <div style={{ 
+                                marginBottom: '10px',
+                                padding: '8px',
+                                borderRadius: '4px',
+                                backgroundColor: JSON.parse(signedData).signatureValid ? '#d4edda' : '#f8d7da',
+                                color: JSON.parse(signedData).signatureValid ? '#155724' : '#721c24',
+                                fontWeight: 'bold'
+                            }}>
+                                {JSON.parse(signedData).verificationResult}
+                            </div>
                             <pre style={{ 
                                 backgroundColor: '#e9ecef', 
                                 padding: '10px',
