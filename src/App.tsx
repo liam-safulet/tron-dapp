@@ -271,34 +271,6 @@ function App() {
         }
     };
 
-    // 新增：验证消息签名的函数
-    const verifyMessageSignature = async (
-        originalMessage: string,
-        signature: string,
-        signerAddress: string
-    ): Promise<boolean> => {
-        try {
-            console.log('开始验证消息签名...');
-
-            // 将消息转换为十六进制
-            const hexMessage = tronWeb.toHex(originalMessage);
-
-            // 使用 TronWeb 验证消息签名
-            const isValid = await Trx.verifySignature(
-                hexMessage,
-                signerAddress,
-                signature
-            );
-
-            console.log('消息签名验证结果:', isValid);
-            return isValid;
-
-        } catch (error) {
-            console.error('验证消息签名时出错:', error);
-            return false;
-        }
-    };
-
     // 签名消息 - 添加签名验证
     const signMessage = async (): Promise<void> => {
         if (!account || !message.trim()) {
@@ -318,14 +290,9 @@ function App() {
             // 使用新的 provider 签名消息
             const signature = await window.binancew3w.tron.signMessage(message);
 
-            // 验证消息签名
-            const isValidSignature = await verifyMessageSignature(message, signature, account);
-
             const signatureData = {
                 originalMessage: message,
                 signature: signature,
-                signatureValid: isValidSignature,
-                verificationResult: isValidSignature ? '✅ 签名验证成功' : '❌ 签名验证失败',
                 signedAt: new Date().toISOString(),
                 address: account,
                 method: 'binancew3w.tron.signMessage'
