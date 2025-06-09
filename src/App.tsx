@@ -575,18 +575,6 @@ function App() {
                             borderRadius: '8px',
                             marginBottom: '20px'
                         }}>
-                            <h3>消息签名结果</h3>
-                            {/* 添加验证状态指示器 */}
-                            <div style={{
-                                marginBottom: '10px',
-                                padding: '8px',
-                                borderRadius: '4px',
-                                backgroundColor: JSON.parse(signedMessage).signatureValid ? '#d4edda' : '#f8d7da',
-                                color: JSON.parse(signedMessage).signatureValid ? '#155724' : '#721c24',
-                                fontWeight: 'bold'
-                            }}>
-                                {JSON.parse(signedMessage).verificationResult}
-                            </div>
                             <pre style={{
                                 backgroundColor: '#e9ecef',
                                 padding: '10px',
