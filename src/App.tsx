@@ -182,7 +182,7 @@ function App() {
         }
     };
 
-    // 只签名智能合约交易
+    // 签名并上链智能合约交易
     const signTransaction = async (): Promise<void> => {
         if (!account || !recipient || !amount) {
             alert('请填写完整信息');
@@ -200,112 +200,42 @@ function App() {
             const transaction = await buildTransaction(recipient, amount);
             console.log('Original transaction:', transaction);
 
-            // 使用新的 provider 签名交易
-            const signedTx = await window.binancew3w.tron.signTransaction(transaction);
+            // 使用 provider 签名交易
+            const signedTx:any = await window.binancew3w.tron.signTransaction(transaction);
             console.log('Signed transaction:', signedTx);
-
-            // 验证签名
-            // const isValidSignature = await verifyTransactionSignature(transaction, signedTx, account);
-
+            
+            // 直接上链
+            const broadcastResult = await tronWeb.trx.sendRawTransaction(signedTx);
+            console.log('Broadcast result:', broadcastResult);
+            
             const result = {
                 originalTransaction: transaction,
                 signedTransaction: signedTx,
-                // signatureValid: isValidSignature,
-                // verificationResult: isValidSignature ? '✅ 签名验证成功' : '❌ 签名验证失败',
+                broadcastResult: broadcastResult,
+                txid: broadcastResult.txid || broadcastResult.transaction?.txID,
+                success: broadcastResult.result || false,
                 signedAt: new Date().toISOString(),
                 address: account
             };
-
+            
             setSignedData(JSON.stringify(result, null, 2));
-
+            
+            if (broadcastResult.result) {
+                alert(`交易已成功上链！\n交易ID: ${broadcastResult.txid || broadcastResult.transaction?.txID}`);
+                // 更新余额
+                await getBalance(account);
+            } else {
+                alert('交易上链失败: ' + (broadcastResult.message || '未知错误'));
+            }
+            
         } catch (error) {
-            console.error('签名失败:', error);
+            console.error('交易失败:', error);
             const errorMessage = error instanceof Error ? error.message : '未知错误';
-            alert('签名失败: ' + errorMessage);
+            alert('交易失败: ' + errorMessage);
         } finally {
             setLoading(false);
         }
     };
-
-    // 验证交易签名的函数
-    // const verifyTransactionSignature = async (
-    //     _originalTransaction: unknown,
-    //     signedTransaction: unknown,
-    //     signerAddress: string
-    // ): Promise<boolean> => {
-    //     try {
-    //         console.log('开始验证签名...');
-    //
-    //         // 方法1: 使用 TronWeb 验证签名
-    //         if (typeof signedTransaction === 'object' && signedTransaction !== null) {
-    //             const tx = signedTransaction as {
-    //                 signature?: string[];
-    //                 txID?: string;
-    //                 raw_data?: unknown;
-    //             };
-    //
-    //             if (tx.signature && tx.signature.length > 0 && tx.txID) {
-    //                 // 使用 TronWeb 验证签名
-    //                 const isValid = await Trx.verifySignature(
-    //                     tx.txID,
-    //                     signerAddress,
-    //                     tx.signature[0]
-    //                 );
-    //
-    //                 console.log('TronWeb 签名验证结果:', isValid);
-    //                 return isValid;
-    //             }
-    //         }
-    //
-    //         // 方法2: 检查签名格式和基本信息
-    //         const txObj = signedTransaction as {
-    //             signature?: string[];
-    //             txID?: string;
-    //             raw_data?: { owner_address?: string };
-    //         };
-    //
-    //         if (!txObj.signature || txObj.signature.length === 0) {
-    //             console.error('签名不存在');
-    //             return false;
-    //         }
-    //
-    //         if (!txObj.txID) {
-    //             console.error('交易ID不存在');
-    //             return false;
-    //         }
-    //
-    //         // 检查签名格式 (应该是十六进制字符串)
-    //         const signature = txObj.signature[0];
-    //         const isValidHex = /^[0-9A-Fa-f]+$/.test(signature);
-    //         const isValidLength = signature.length === 130; // 65 bytes * 2
-    //
-    //         console.log('签名格式检查:', {
-    //             signature: signature.substring(0, 20) + '...',
-    //             isValidHex,
-    //             isValidLength,
-    //             length: signature.length
-    //         });
-    //
-    //         // 检查交易中的地址是否匹配
-    //         if (txObj.raw_data?.owner_address) {
-    //             const ownerAddress = tronWeb.address.fromHex(txObj.raw_data.owner_address);
-    //             const addressMatch = ownerAddress === signerAddress;
-    //             console.log('地址匹配检查:', {
-    //                 ownerAddress,
-    //                 signerAddress,
-    //                 addressMatch
-    //             });
-    //
-    //             return isValidHex && isValidLength && addressMatch;
-    //         }
-    //
-    //         return isValidHex && isValidLength;
-    //
-    //     } catch (error) {
-    //         console.error('验证签名时出错:', error);
-    //         return false;
-    //     }
-    // };
 
     // 新增：验证消息签名的函数
     const verifyMessageSignature = async (
@@ -583,7 +513,7 @@ function App() {
                                     cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
                             >
-                                {loading ? '处理中...' : '仅签名交易'}
+                                {loading ? '处理中...' : '签名并上链'}
                             </button>
                             <button
                                 onClick={signAndSendTransaction}
@@ -598,7 +528,7 @@ function App() {
                                     cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
                             >
-                                {loading ? '处理中...' : '签名并发送'}
+                                {loading ? '处理中...' : '直接发送'}
                             </button>
                         </div>
                     </div>
@@ -648,11 +578,11 @@ function App() {
                                 marginBottom: '10px',
                                 padding: '8px',
                                 borderRadius: '4px',
-                                backgroundColor: JSON.parse(signedData).signatureValid ? '#d4edda' : '#f8d7da',
-                                color: JSON.parse(signedData).signatureValid ? '#155724' : '#721c24',
+                                backgroundColor: JSON.parse(signedData).success ? '#d4edda' : '#f8d7da',
+                                color: JSON.parse(signedData).success ? '#155724' : '#721c24',
                                 fontWeight: 'bold'
                             }}>
-                                {JSON.parse(signedData).verificationResult}
+                                {JSON.parse(signedData).success ? '✅ 交易成功' : '❌ 交易失败'}
                             </div>
                             <pre style={{
                                 backgroundColor: '#e9ecef',
