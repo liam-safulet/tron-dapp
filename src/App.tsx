@@ -23,11 +23,6 @@ interface TronTransaction {
     transaction?: unknown;
 }
 
-interface ContractParameter {
-    type: string;
-    value: string | number;
-}
-
 const tronWeb = new TronWeb({
     fullHost: 'https://api.trongrid.io', // 主网
     // fullHost: 'https://api.nileex.io', // 测试网
@@ -40,7 +35,7 @@ function App() {
     const [signedData, setSignedData] = useState<string>('');
     const [recipient, setRecipient] = useState<string>('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
     const [amount, setAmount] = useState<string>('0.1');
-    
+
     // 添加消息签名相关状态
     const [message, setMessage] = useState<string>('Hello, Binance W3W!');
     const [signedMessage, setSignedMessage] = useState<string>('');
@@ -64,7 +59,7 @@ function App() {
         try {
             if (window.binancew3w?.tron) {
                 // 尝试获取账户信息
-                const { address } = await window.binancew3w.tron.getAccount();
+                const {address} = await window.binancew3w.tron.getAccount();
                 if (address) {
                     setAccount(address);
                     await getBalance(address);
@@ -95,10 +90,10 @@ function App() {
             }
 
             setLoading(true);
-            
+
             // 获取账户
-            const { address } = await window.binancew3w.tron.getAccount();
-            
+            const {address} = await window.binancew3w.tron.getAccount();
+
             if (address) {
                 setAccount(address);
                 await getBalance(address);
@@ -136,29 +131,43 @@ function App() {
         }
     };
 
-    // 构建智能合约交易参数 - 使用对象数组格式
-    const buildContractParameters = (recipientAddress: string, transferAmount: string): ContractParameter[] => {
-        const amountInWei = Number(transferAmount) * 1000000; // USDT 有 6 位小数
+    // 构建智能合约交易参数 - 恢复正确的对象数组格式
+    const buildContractParameters = (recipientAddress: string, transferAmount: string): {
+        type: string,
+        value: string
+    }[] => {
+        const amountInWei = Math.floor(Number(transferAmount) * 1000000); // USDT 有 6 位小数，确保是整数
         return [
-            { type: 'address', value: recipientAddress },
-            { type: 'uint256', value: amountInWei }
+            {type: 'address', value: recipientAddress},
+            {type: 'uint256', value: String(amountInWei)}
         ];
     };
 
-    // 构建交易对象
+    // 构建交易对象 - 修复函数选择器格式
     const buildTransaction = async (recipientAddress: string, transferAmount: string): Promise<unknown> => {
         try {
-            const parameter = buildContractParameters(recipientAddress, transferAmount);
-            
-            // 使用 TronWeb 构建交易
-            const transaction: TronTransaction = await tronWeb.transactionBuilder.triggerSmartContract(
+            const parameters = buildContractParameters(recipientAddress, transferAmount);
+
+            console.log('构建交易参数:', {
                 CONTRACT_ADDRESS,
                 TRANSFER_FUNCTION_SELECTOR,
+                parameters,
+                account
+            });
+
+            // 尝试不同的函数选择器格式
+            const functionSelector = 'transfer(address,uint256)'; // 使用完整函数签名而不是哈希
+
+            console.log('使用函数选择器:', functionSelector);
+
+            const transaction: TronTransaction = await tronWeb.transactionBuilder.triggerSmartContract(
+                CONTRACT_ADDRESS,
+                functionSelector, // 使用完整函数签名
                 {
                     feeLimit: 50000000, // 50 TRX 费用限制
                     callValue: 0, // 不发送 TRX
                 },
-                parameter,
+                parameters,
                 account
             );
 
@@ -194,10 +203,10 @@ function App() {
             // 使用新的 provider 签名交易
             const signedTx = await window.binancew3w.tron.signTransaction(transaction);
             console.log('Signed transaction:', signedTx);
-            
+
             // 验证签名
             const isValidSignature = await verifyTransactionSignature(transaction, signedTx, account);
-            
+
             const result = {
                 originalTransaction: transaction,
                 signedTransaction: signedTx,
@@ -206,9 +215,9 @@ function App() {
                 signedAt: new Date().toISOString(),
                 address: account
             };
-            
+
             setSignedData(JSON.stringify(result, null, 2));
-            
+
         } catch (error) {
             console.error('签名失败:', error);
             const errorMessage = error instanceof Error ? error.message : '未知错误';
@@ -221,20 +230,20 @@ function App() {
     // 验证交易签名的函数
     const verifyTransactionSignature = async (
         _originalTransaction: unknown,
-        signedTransaction: unknown, 
+        signedTransaction: unknown,
         signerAddress: string
     ): Promise<boolean> => {
         try {
             console.log('开始验证签名...');
-            
+
             // 方法1: 使用 TronWeb 验证签名
             if (typeof signedTransaction === 'object' && signedTransaction !== null) {
-                const tx = signedTransaction as { 
-                    signature?: string[]; 
+                const tx = signedTransaction as {
+                    signature?: string[];
                     txID?: string;
                     raw_data?: unknown;
                 };
-                
+
                 if (tx.signature && tx.signature.length > 0 && tx.txID) {
                     // 使用 TronWeb 验证签名
                     const isValid = await Trx.verifySignature(
@@ -242,19 +251,19 @@ function App() {
                         signerAddress,
                         tx.signature[0]
                     );
-                    
+
                     console.log('TronWeb 签名验证结果:', isValid);
                     return isValid;
                 }
             }
 
             // 方法2: 检查签名格式和基本信息
-            const txObj = signedTransaction as { 
-                signature?: string[]; 
+            const txObj = signedTransaction as {
+                signature?: string[];
                 txID?: string;
                 raw_data?: { owner_address?: string };
             };
-            
+
             if (!txObj.signature || txObj.signature.length === 0) {
                 console.error('签名不存在');
                 return false;
@@ -269,7 +278,7 @@ function App() {
             const signature = txObj.signature[0];
             const isValidHex = /^[0-9A-Fa-f]+$/.test(signature);
             const isValidLength = signature.length === 130; // 65 bytes * 2
-            
+
             console.log('签名格式检查:', {
                 signature: signature.substring(0, 20) + '...',
                 isValidHex,
@@ -286,7 +295,7 @@ function App() {
                     signerAddress,
                     addressMatch
                 });
-                
+
                 return isValidHex && isValidLength && addressMatch;
             }
 
@@ -306,20 +315,20 @@ function App() {
     ): Promise<boolean> => {
         try {
             console.log('开始验证消息签名...');
-            
+
             // 将消息转换为十六进制
             const hexMessage = tronWeb.toHex(originalMessage);
-            
+
             // 使用 TronWeb 验证消息签名
             const isValid = await Trx.verifySignature(
                 hexMessage,
                 signerAddress,
                 signature
             );
-            
+
             console.log('消息签名验证结果:', isValid);
             return isValid;
-            
+
         } catch (error) {
             console.error('验证消息签名时出错:', error);
             return false;
@@ -341,13 +350,13 @@ function App() {
             }
 
             console.log('Signing message:', message);
-            
+
             // 使用新的 provider 签名消息
             const signature = await window.binancew3w.tron.signMessage(message);
-            
+
             // 验证消息签名
             const isValidSignature = await verifyMessageSignature(message, signature, account);
-            
+
             const signatureData = {
                 originalMessage: message,
                 signature: signature,
@@ -357,9 +366,9 @@ function App() {
                 address: account,
                 method: 'binancew3w.tron.signMessage'
             };
-            
+
             setSignedMessage(JSON.stringify(signatureData, null, 2));
-            
+
         } catch (error) {
             console.error('消息签名失败:', error);
             const errorMessage = error instanceof Error ? error.message : '未知错误';
@@ -388,9 +397,9 @@ function App() {
 
             // 使用新的 provider 签名并发送交易
             const result = await window.binancew3w.tron.signAndSendTransaction(transaction);
-            
+
             setSignedData(JSON.stringify(result, null, 2));
-            
+
             if (result.result) {
                 alert('智能合约交易发送成功！');
                 // 更新余额
@@ -420,20 +429,20 @@ function App() {
     };
 
     return (
-        <div className="App" style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+        <div className="App" style={{padding: '20px', maxWidth: '600px', margin: '0 auto'}}>
             <h1>Binance Web3 Wallet - Tron dApp</h1>
-            
+
             {!account ? (
-                <div style={{ textAlign: 'center', marginTop: '50px' }}>
-                    <button 
-                        onClick={connectWallet} 
+                <div style={{textAlign: 'center', marginTop: '50px'}}>
+                    <button
+                        onClick={connectWallet}
                         disabled={loading}
-                        style={{ 
-                            padding: '12px 24px', 
-                            fontSize: '16px', 
+                        style={{
+                            padding: '12px 24px',
+                            fontSize: '16px',
                             backgroundColor: '#007bff',
                             color: 'white',
-                            border: 'none', 
+                            border: 'none',
                             borderRadius: '6px',
                             cursor: loading ? 'not-allowed' : 'pointer'
                         }}
@@ -444,22 +453,22 @@ function App() {
             ) : (
                 <div>
                     {/* 钱包信息 */}
-                    <div style={{ 
-                        backgroundColor: '#f8f9fa', 
+                    <div style={{
+                        backgroundColor: '#f8f9fa',
                         padding: '15px',
-                        borderRadius: '8px', 
-                        marginBottom: '20px' 
+                        borderRadius: '8px',
+                        marginBottom: '20px'
                     }}>
                         <h3>钱包信息</h3>
                         <p><strong>地址:</strong> {account}</p>
                         <p><strong>TRX 余额:</strong> {balance} TRX</p>
-                        <button 
+                        <button
                             onClick={disconnectWallet}
-                            style={{ 
-                                padding: '8px 16px', 
+                            style={{
+                                padding: '8px 16px',
                                 backgroundColor: '#dc3545',
                                 color: 'white',
-                                border: 'none', 
+                                border: 'none',
                                 borderRadius: '4px',
                                 cursor: 'pointer'
                             }}
@@ -469,27 +478,27 @@ function App() {
                     </div>
 
                     {/* 消息签名部分 */}
-                    <div style={{ 
+                    <div style={{
                         backgroundColor: '#f8f9fa',
                         padding: '15px',
-                        borderRadius: '8px', 
-                        marginBottom: '20px' 
+                        borderRadius: '8px',
+                        marginBottom: '20px'
                     }}>
                         <h3>消息签名</h3>
-                        <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                        <p style={{fontSize: '14px', color: '#666', marginBottom: '15px'}}>
                             使用 binancew3w.tron.signMessage() 方法签名消息
                         </p>
-                        
-                        <div style={{ marginBottom: '15px' }}>
+
+                        <div style={{marginBottom: '15px'}}>
                             <label>要签名的消息:</label>
                             <textarea
                                 value={message}
                                 onChange={handleMessageChange}
                                 placeholder="输入要签名的消息"
                                 rows={3}
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '8px', 
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
                                     marginTop: '5px',
                                     borderRadius: '4px',
                                     border: '1px solid #ddd',
@@ -497,15 +506,15 @@ function App() {
                                 }}
                             />
                         </div>
-                        
-                        <button 
+
+                        <button
                             onClick={signMessage}
                             disabled={loading}
-                            style={{ 
-                                padding: '10px 20px', 
+                            style={{
+                                padding: '10px 20px',
                                 backgroundColor: '#6f42c1',
                                 color: 'white',
-                                border: 'none', 
+                                border: 'none',
                                 borderRadius: '4px',
                                 cursor: loading ? 'not-allowed' : 'pointer'
                             }}
@@ -515,34 +524,34 @@ function App() {
                     </div>
 
                     {/* 智能合约交易表单 */}
-                    <div style={{ 
+                    <div style={{
                         backgroundColor: '#f8f9fa',
                         padding: '15px',
-                        borderRadius: '8px', 
-                        marginBottom: '20px' 
+                        borderRadius: '8px',
+                        marginBottom: '20px'
                     }}>
                         <h3>USDT 转账 (TRC20)</h3>
-                        <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                        <p style={{fontSize: '14px', color: '#666', marginBottom: '15px'}}>
                             合约地址: {CONTRACT_ADDRESS}
                         </p>
-                        
-                        <div style={{ marginBottom: '15px' }}>
+
+                        <div style={{marginBottom: '15px'}}>
                             <label>接收地址:</label>
                             <input
                                 type="text"
                                 value={recipient}
                                 onChange={handleRecipientChange}
                                 placeholder="输入接收地址"
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '8px', 
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
                                     marginTop: '5px',
                                     borderRadius: '4px',
                                     border: '1px solid #ddd'
                                 }}
                             />
                         </div>
-                        <div style={{ marginBottom: '15px' }}>
+                        <div style={{marginBottom: '15px'}}>
                             <label>金额 (USDT):</label>
                             <input
                                 type="number"
@@ -550,41 +559,41 @@ function App() {
                                 onChange={handleAmountChange}
                                 placeholder="输入金额"
                                 step="0.000001"
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '8px', 
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
                                     marginTop: '5px',
                                     borderRadius: '4px',
                                     border: '1px solid #ddd'
                                 }}
                             />
                         </div>
-                        
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button 
+
+                        <div style={{display: 'flex', gap: '10px'}}>
+                            <button
                                 onClick={signTransaction}
                                 disabled={loading}
-                                style={{ 
+                                style={{
                                     flex: 1,
-                                    padding: '10px', 
+                                    padding: '10px',
                                     backgroundColor: '#28a745',
                                     color: 'white',
-                                    border: 'none', 
+                                    border: 'none',
                                     borderRadius: '4px',
                                     cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
                             >
                                 {loading ? '处理中...' : '仅签名交易'}
                             </button>
-                            <button 
+                            <button
                                 onClick={signAndSendTransaction}
                                 disabled={loading}
-                                style={{ 
+                                style={{
                                     flex: 1,
-                                    padding: '10px', 
+                                    padding: '10px',
                                     backgroundColor: '#007bff',
                                     color: 'white',
-                                    border: 'none', 
+                                    border: 'none',
                                     borderRadius: '4px',
                                     cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
@@ -596,15 +605,15 @@ function App() {
 
                     {/* 消息签名结果显示 */}
                     {signedMessage && (
-                        <div style={{ 
-                            backgroundColor: '#f8f9fa', 
-                            padding: '15px', 
+                        <div style={{
+                            backgroundColor: '#f8f9fa',
+                            padding: '15px',
                             borderRadius: '8px',
                             marginBottom: '20px'
                         }}>
                             <h3>消息签名结果</h3>
                             {/* 添加验证状态指示器 */}
-                            <div style={{ 
+                            <div style={{
                                 marginBottom: '10px',
                                 padding: '8px',
                                 borderRadius: '4px',
@@ -614,8 +623,8 @@ function App() {
                             }}>
                                 {JSON.parse(signedMessage).verificationResult}
                             </div>
-                            <pre style={{ 
-                                backgroundColor: '#e9ecef', 
+                            <pre style={{
+                                backgroundColor: '#e9ecef',
                                 padding: '10px',
                                 borderRadius: '4px',
                                 overflow: 'auto',
@@ -628,14 +637,14 @@ function App() {
 
                     {/* 交易数据显示 */}
                     {signedData && (
-                        <div style={{ 
-                            backgroundColor: '#f8f9fa', 
+                        <div style={{
+                            backgroundColor: '#f8f9fa',
                             padding: '15px',
-                            borderRadius: '8px' 
+                            borderRadius: '8px'
                         }}>
                             <h3>智能合约交易数据</h3>
                             {/* 添加验证状态指示器 */}
-                            <div style={{ 
+                            <div style={{
                                 marginBottom: '10px',
                                 padding: '8px',
                                 borderRadius: '4px',
@@ -645,8 +654,8 @@ function App() {
                             }}>
                                 {JSON.parse(signedData).verificationResult}
                             </div>
-                            <pre style={{ 
-                                backgroundColor: '#e9ecef', 
+                            <pre style={{
+                                backgroundColor: '#e9ecef',
                                 padding: '10px',
                                 borderRadius: '4px',
                                 overflow: 'auto',
