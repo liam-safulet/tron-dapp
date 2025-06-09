@@ -513,7 +513,7 @@ function App() {
                                     cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
                             >
-                                {loading ? '处理中...' : '签名并上链'}
+                                {loading ? '处理中...' : 'signTransaction'}
                             </button>
                             <button
                                 onClick={signAndSendTransaction}
@@ -528,7 +528,7 @@ function App() {
                                     cursor: loading ? 'not-allowed' : 'pointer'
                                 }}
                             >
-                                {loading ? '处理中...' : '直接发送'}
+                                {loading ? '处理中...' : 'signAndSendTransaction'}
                             </button>
                         </div>
                     </div>
