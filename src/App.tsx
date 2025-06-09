@@ -1,5 +1,5 @@
 import './App.css'
-import {useState, useEffect} from 'react'
+import {useState, useEffect, useCallback} from 'react'
 import {TronWeb, Trx} from 'tronweb';
 
 declare global {
@@ -11,6 +11,8 @@ declare global {
                 signTransaction(tx: unknown): Promise<unknown>;
                 signAndSendTransaction(tx: unknown): Promise<{ txid?: string; result?: boolean }>;
                 disconnect(): Promise<void>;
+                on?(event: string, callback: (data: any) => void): void;
+                off?(event: string, callback: (data: any) => void): void;
             }
         }
     }
@@ -45,17 +47,8 @@ function App() {
     // transfer(address,uint256) 函数选择器
     const TRANSFER_FUNCTION_SELECTOR = 'a9059cbb';
 
-    useEffect(() => {
-        const initialize = async () => {
-            await checkWalletConnection();
-        };
-        initialize().catch((error) => {
-            console.error('Initialization error:', error);
-        });
-    }, []);
-
     // 检查钱包连接状态
-    const checkWalletConnection = async (): Promise<void> => {
+    const checkWalletConnection = useCallback(async (): Promise<void> => {
         try {
             if (window.binancew3w?.tron) {
                 // 尝试获取账户信息
@@ -69,7 +62,48 @@ function App() {
             console.log(error);
             // 静默处理连接检查错误，因为钱包可能未连接
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        const initialize = async () => {
+            await checkWalletConnection();
+        };
+
+        // 监听账户变化事件
+        const handleAccountsChanged = (accounts: string[]) => {
+            console.log('账户变化事件:', accounts);
+            if (accounts && accounts.length > 0) {
+                const newAddress = accounts[0];
+                setAccount(newAddress);
+                getBalance(newAddress);
+                console.log('账户已更新为:', newAddress);
+            } else {
+                // 如果没有账户，表示钱包断开连接
+                setAccount('');
+                setBalance('0');
+                setSignedData('');
+                setSignedMessage('');
+                console.log('钱包已断开连接');
+            }
+        };
+
+        // 添加事件监听器
+        if (window.binancew3w?.tron?.on) {
+            window.binancew3w.tron.on('accountsChanged', handleAccountsChanged);
+        }
+
+        initialize().catch((error) => {
+            console.error('Initialization error:', error);
+        });
+
+        // 清理函数：移除事件监听器
+        return () => {
+            if (window.binancew3w?.tron?.off) {
+                window.binancew3w.tron.off('accountsChanged', handleAccountsChanged);
+            }
+        };
+    }, [checkWalletConnection]);
+
 
     // 获取余额
     const getBalance = async (address: string): Promise<void> => {
@@ -201,13 +235,13 @@ function App() {
             console.log('Original transaction:', transaction);
 
             // 使用 provider 签名交易
-            const signedTx:any = await window.binancew3w.tron.signTransaction(transaction);
+            const signedTx: any = await window.binancew3w.tron.signTransaction(transaction);
             console.log('Signed transaction:', signedTx);
-            
+
             // 直接上链
             const broadcastResult = await tronWeb.trx.sendRawTransaction(signedTx);
             console.log('Broadcast result:', broadcastResult);
-            
+
             const result = {
                 originalTransaction: transaction,
                 signedTransaction: signedTx,
@@ -217,9 +251,9 @@ function App() {
                 signedAt: new Date().toISOString(),
                 address: account
             };
-            
+
             setSignedData(JSON.stringify(result, null, 2));
-            
+
             if (broadcastResult.result) {
                 alert(`交易已成功上链！\n交易ID: ${broadcastResult.txid || broadcastResult.transaction?.txID}`);
                 // 更新余额
@@ -227,7 +261,7 @@ function App() {
             } else {
                 alert('交易上链失败: ' + (broadcastResult.message || '未知错误'));
             }
-            
+
         } catch (error) {
             console.error('交易失败:', error);
             const errorMessage = error instanceof Error ? error.message : '未知错误';
