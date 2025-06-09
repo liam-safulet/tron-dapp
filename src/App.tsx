@@ -205,13 +205,13 @@ function App() {
             console.log('Signed transaction:', signedTx);
 
             // 验证签名
-            const isValidSignature = await verifyTransactionSignature(transaction, signedTx, account);
+            // const isValidSignature = await verifyTransactionSignature(transaction, signedTx, account);
 
             const result = {
                 originalTransaction: transaction,
                 signedTransaction: signedTx,
-                signatureValid: isValidSignature,
-                verificationResult: isValidSignature ? '✅ 签名验证成功' : '❌ 签名验证失败',
+                // signatureValid: isValidSignature,
+                // verificationResult: isValidSignature ? '✅ 签名验证成功' : '❌ 签名验证失败',
                 signedAt: new Date().toISOString(),
                 address: account
             };
@@ -228,84 +228,84 @@ function App() {
     };
 
     // 验证交易签名的函数
-    const verifyTransactionSignature = async (
-        _originalTransaction: unknown,
-        signedTransaction: unknown,
-        signerAddress: string
-    ): Promise<boolean> => {
-        try {
-            console.log('开始验证签名...');
-
-            // 方法1: 使用 TronWeb 验证签名
-            if (typeof signedTransaction === 'object' && signedTransaction !== null) {
-                const tx = signedTransaction as {
-                    signature?: string[];
-                    txID?: string;
-                    raw_data?: unknown;
-                };
-
-                if (tx.signature && tx.signature.length > 0 && tx.txID) {
-                    // 使用 TronWeb 验证签名
-                    const isValid = await Trx.verifySignature(
-                        tx.txID,
-                        signerAddress,
-                        tx.signature[0]
-                    );
-
-                    console.log('TronWeb 签名验证结果:', isValid);
-                    return isValid;
-                }
-            }
-
-            // 方法2: 检查签名格式和基本信息
-            const txObj = signedTransaction as {
-                signature?: string[];
-                txID?: string;
-                raw_data?: { owner_address?: string };
-            };
-
-            if (!txObj.signature || txObj.signature.length === 0) {
-                console.error('签名不存在');
-                return false;
-            }
-
-            if (!txObj.txID) {
-                console.error('交易ID不存在');
-                return false;
-            }
-
-            // 检查签名格式 (应该是十六进制字符串)
-            const signature = txObj.signature[0];
-            const isValidHex = /^[0-9A-Fa-f]+$/.test(signature);
-            const isValidLength = signature.length === 130; // 65 bytes * 2
-
-            console.log('签名格式检查:', {
-                signature: signature.substring(0, 20) + '...',
-                isValidHex,
-                isValidLength,
-                length: signature.length
-            });
-
-            // 检查交易中的地址是否匹配
-            if (txObj.raw_data?.owner_address) {
-                const ownerAddress = tronWeb.address.fromHex(txObj.raw_data.owner_address);
-                const addressMatch = ownerAddress === signerAddress;
-                console.log('地址匹配检查:', {
-                    ownerAddress,
-                    signerAddress,
-                    addressMatch
-                });
-
-                return isValidHex && isValidLength && addressMatch;
-            }
-
-            return isValidHex && isValidLength;
-
-        } catch (error) {
-            console.error('验证签名时出错:', error);
-            return false;
-        }
-    };
+    // const verifyTransactionSignature = async (
+    //     _originalTransaction: unknown,
+    //     signedTransaction: unknown,
+    //     signerAddress: string
+    // ): Promise<boolean> => {
+    //     try {
+    //         console.log('开始验证签名...');
+    //
+    //         // 方法1: 使用 TronWeb 验证签名
+    //         if (typeof signedTransaction === 'object' && signedTransaction !== null) {
+    //             const tx = signedTransaction as {
+    //                 signature?: string[];
+    //                 txID?: string;
+    //                 raw_data?: unknown;
+    //             };
+    //
+    //             if (tx.signature && tx.signature.length > 0 && tx.txID) {
+    //                 // 使用 TronWeb 验证签名
+    //                 const isValid = await Trx.verifySignature(
+    //                     tx.txID,
+    //                     signerAddress,
+    //                     tx.signature[0]
+    //                 );
+    //
+    //                 console.log('TronWeb 签名验证结果:', isValid);
+    //                 return isValid;
+    //             }
+    //         }
+    //
+    //         // 方法2: 检查签名格式和基本信息
+    //         const txObj = signedTransaction as {
+    //             signature?: string[];
+    //             txID?: string;
+    //             raw_data?: { owner_address?: string };
+    //         };
+    //
+    //         if (!txObj.signature || txObj.signature.length === 0) {
+    //             console.error('签名不存在');
+    //             return false;
+    //         }
+    //
+    //         if (!txObj.txID) {
+    //             console.error('交易ID不存在');
+    //             return false;
+    //         }
+    //
+    //         // 检查签名格式 (应该是十六进制字符串)
+    //         const signature = txObj.signature[0];
+    //         const isValidHex = /^[0-9A-Fa-f]+$/.test(signature);
+    //         const isValidLength = signature.length === 130; // 65 bytes * 2
+    //
+    //         console.log('签名格式检查:', {
+    //             signature: signature.substring(0, 20) + '...',
+    //             isValidHex,
+    //             isValidLength,
+    //             length: signature.length
+    //         });
+    //
+    //         // 检查交易中的地址是否匹配
+    //         if (txObj.raw_data?.owner_address) {
+    //             const ownerAddress = tronWeb.address.fromHex(txObj.raw_data.owner_address);
+    //             const addressMatch = ownerAddress === signerAddress;
+    //             console.log('地址匹配检查:', {
+    //                 ownerAddress,
+    //                 signerAddress,
+    //                 addressMatch
+    //             });
+    //
+    //             return isValidHex && isValidLength && addressMatch;
+    //         }
+    //
+    //         return isValidHex && isValidLength;
+    //
+    //     } catch (error) {
+    //         console.error('验证签名时出错:', error);
+    //         return false;
+    //     }
+    // };
 
     // 新增：验证消息签名的函数
     const verifyMessageSignature = async (
