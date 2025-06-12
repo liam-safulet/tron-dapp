@@ -335,18 +335,6 @@ const TrxTransferComponent: React.FC<TrxTransferComponentProps> = ({
                     borderRadius: '8px',
                     marginBottom: '20px'
                 }}>
-                    <h3>TRX 转账结果</h3>
-                    {/* 添加状态指示器 */}
-                    <div style={{
-                        marginBottom: '10px',
-                        padding: '8px',
-                        borderRadius: '4px',
-                        backgroundColor: JSON.parse(trxTransferData).success ? '#d4edda' : '#f8d7da',
-                        color: JSON.parse(trxTransferData).success ? '#155724' : '#721c24',
-                        fontWeight: 'bold'
-                    }}>
-                        {JSON.parse(trxTransferData).success ? '✅ 转账成功' : '❌ 转账失败'}
-                    </div>
                     <pre style={{
                         backgroundColor: '#e9ecef',
                         padding: '10px',
