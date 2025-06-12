@@ -1,6 +1,7 @@
 import './App.css'
 import {useState, useEffect, useCallback} from 'react'
 import {TronWeb} from 'tronweb';
+import TrxTransferComponent from './TrxTransferComponent';
 
 declare global {
     interface Window {
@@ -533,6 +534,14 @@ function App() {
                             </button>
                         </div>
                     </div>
+
+                    {/* TRX 转账组件 */}
+                    <TrxTransferComponent 
+                        account={account}
+                        tronWeb={tronWeb}
+                        binanceW3W={window.binancew3w}
+                        onBalanceUpdate={getBalance}
+                    />
 
                     {/* 消息签名结果显示 */}
                     {signedMessage && (
