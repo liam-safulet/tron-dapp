@@ -544,7 +544,7 @@ function App() {
                         onBalanceUpdate={getBalance}
                     />
 
-                    {/* TRC-10 智能合约组件 */}
+                    {/* USDT (TRC-20) 智能合约组件 */}
                     <Trc10ContractComponent 
                         account={account}
                         tronWeb={tronWeb}

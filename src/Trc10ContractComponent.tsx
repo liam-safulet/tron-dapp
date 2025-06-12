@@ -38,10 +38,10 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
     onBalanceUpdate
 }) => {
     const [loading, setLoading] = useState<boolean>(false);
-    const [contractAddress, setContractAddress] = useState<string>('TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7'); // 示例 TRC-10 合约地址
+    const [contractAddress, setContractAddress] = useState<string>('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'); // USDT TRC-20 合约地址
     const [recipient, setRecipient] = useState<string>('TUaRyMRuzyX6tHZRoHz645PL1bn3E5NrWC');
     const [amount, setAmount] = useState<string>('1.0');
-    const [decimals, setDecimals] = useState<string>('6'); // 代币精度
+    const [decimals, setDecimals] = useState<string>('6'); // USDT 有 6 位小数
     const [trc10TransferData, setTrc10TransferData] = useState<string>('');
 
     // transfer(address,uint256) 函数选择器
@@ -264,9 +264,9 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                 borderRadius: '8px',
                 marginBottom: '20px'
             }}>
-                <h3>TRC-10 智能合约交易</h3>
+                <h3>TRC-20 智能合约交易 (USDT)</h3>
                 <p style={{fontSize: '14px', color: '#666', marginBottom: '15px'}}>
-                    TRC-10 代币转账 (triggerSmartContract)
+                    TRC-20 代币转账 (triggerSmartContract) - 默认为 USDT
                 </p>
 
                 <div style={{marginBottom: '15px'}}>
@@ -275,7 +275,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                         type="text"
                         value={contractAddress}
                         onChange={handleContractAddressChange}
-                        placeholder="输入 TRC-10 合约地址"
+                        placeholder="输入 TRC-20 合约地址 (默认 USDT)"
                         style={{
                             width: '100%',
                             padding: '8px',
@@ -353,7 +353,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                             cursor: loading ? 'not-allowed' : 'pointer'
                         }}
                     >
-                        {loading ? '处理中...' : 'TRC-10 signTransaction'}
+                        {loading ? '处理中...' : 'USDT signTransaction'}
                     </button>
                     <button
                         onClick={signAndSendTrc10Transaction}
@@ -368,7 +368,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                             cursor: loading ? 'not-allowed' : 'pointer'
                         }}
                     >
-                        {loading ? '处理中...' : 'TRC-10 signAndSendTransaction'}
+                        {loading ? '处理中...' : 'USDT signAndSendTransaction'}
                     </button>
                 </div>
             </div>
@@ -381,7 +381,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                     borderRadius: '8px',
                     marginBottom: '20px'
                 }}>
-                    <h3>TRC-10 合约交易结果</h3>
+                    <h3>USDT 合约交易结果</h3>
                     <pre style={{
                         backgroundColor: '#e9ecef',
                         padding: '10px',
