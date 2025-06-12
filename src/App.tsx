@@ -2,7 +2,6 @@ import './App.css'
 import {useState, useEffect, useCallback} from 'react'
 import {TronWeb} from 'tronweb';
 import TrxTransferComponent from './TrxTransferComponent';
-import Trc10ContractComponent from './Trc10ContractComponent';
 
 declare global {
     interface Window {
@@ -538,14 +537,6 @@ function App() {
 
                     {/* TRX 转账组件 */}
                     <TrxTransferComponent 
-                        account={account}
-                        tronWeb={tronWeb}
-                        binanceW3W={window.binancew3w}
-                        onBalanceUpdate={getBalance}
-                    />
-
-                    {/* TRC-10 智能合约组件 */}
-                    <Trc10ContractComponent 
                         account={account}
                         tronWeb={tronWeb}
                         binanceW3W={window.binancew3w}

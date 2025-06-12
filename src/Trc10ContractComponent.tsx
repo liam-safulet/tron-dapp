@@ -9,8 +9,8 @@ interface Trc10ContractComponentProps {
     onBalanceUpdate: (address: string) => Promise<void>;
 }
 
-// TRC-10 合约交易结果接口
-interface Trc10ContractResult {
+// TRC-10 代币转账结果接口
+interface Trc10TransferResult {
     originalTransaction: unknown;
     signedTransaction?: unknown;
     broadcastResult?: unknown;
@@ -19,11 +19,11 @@ interface Trc10ContractResult {
     signedAt: string;
     address: string;
     method: 'signTransaction' | 'signAndSendTransaction';
-    contractAddress: string;
-    functionSelector: string;
+    tokenId: string;
+    tokenInfo?: string;
 }
 
-// TRC-10 交易接口
+// TRON 交易接口
 interface TronTransaction {
     result?: {
         result?: boolean;
@@ -38,7 +38,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
     onBalanceUpdate
 }) => {
     const [loading, setLoading] = useState<boolean>(false);
-    const [contractAddress, setContractAddress] = useState<string>('TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7'); // 示例 TRC-10 合约地址
+    const [contractAddress, setContractAddress] = useState<string>('TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7'); // WINkLink 智能合约地址
     const [recipient, setRecipient] = useState<string>('TUaRyMRuzyX6tHZRoHz645PL1bn3E5NrWC');
     const [amount, setAmount] = useState<string>('1.0');
     const [decimals, setDecimals] = useState<string>('6'); // 代币精度
@@ -46,6 +46,15 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
 
     // transfer(address,uint256) 函数选择器
     const TRANSFER_FUNCTION_SELECTOR = 'transfer(address,uint256)';
+
+    // 常见的可通过智能合约调用的 TRC-10/TRC-20 代币
+    const smartContractTokens = [
+        { address: 'TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7', name: 'WINkLink (WIN)', decimals: 6, symbol: 'WIN', type: 'TRC-20' },
+        { address: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', name: 'Tether USD (USDT)', decimals: 6, symbol: 'USDT', type: 'TRC-20' },
+        { address: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', name: 'USDC', decimals: 6, symbol: 'USDC', type: 'TRC-20' },
+        { address: 'TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9', name: 'JustStableCoin (USDJ)', decimals: 18, symbol: 'USDJ', type: 'TRC-20' },
+        { address: 'TCFLL5dx5ZJdKnWuesXxi1VPwjLVmWZZy9', name: 'JustSwap Token (JST)', decimals: 18, symbol: 'JST', type: 'TRC-20' },
+    ];
 
     // 构建智能合约交易参数
     const buildContractParameters = (recipientAddress: string, transferAmount: string, tokenDecimals: string): {
@@ -60,18 +69,19 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
         ];
     };
 
-    // 构建 TRC-10 合约交易
+    // 构建智能合约交易
     const buildTrc10Transaction = async (contractAddr: string, recipientAddress: string, transferAmount: string, tokenDecimals: string): Promise<unknown> => {
         try {
             const parameters = buildContractParameters(recipientAddress, transferAmount, tokenDecimals);
 
-            console.log('构建 TRC-10 合约交易参数:', {
+            console.log('构建智能合约交易参数:', {
                 contractAddress: contractAddr,
                 functionSelector: TRANSFER_FUNCTION_SELECTOR,
                 parameters,
                 account
             });
 
+            // 使用 triggerSmartContract 调用合约的 transfer 函数
             const transaction: TronTransaction = await tronWeb.transactionBuilder.triggerSmartContract(
                 contractAddr,
                 TRANSFER_FUNCTION_SELECTOR,
@@ -88,16 +98,17 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
             }
 
             return transaction.transaction;
+            
         } catch (error) {
-            console.error('构建 TRC-10 合约交易失败:', error);
+            console.error('构建智能合约交易失败:', error);
             throw error;
         }
     };
 
-    // 验证合约交易参数
-    const validateContractParams = (contractAddr: string, recipientAddr: string, transferAmount: string): void => {
+    // 验证智能合约交易参数
+    const validateTrc10Params = (contractAddr: string, recipientAddr: string, transferAmount: string): void => {
         if (!account || !contractAddr || !recipientAddr || !transferAmount) {
-            throw new Error('合约交易参数不完整');
+            throw new Error('智能合约交易参数不完整');
         }
         
         if (!tronWeb.isAddress(account)) {
@@ -137,7 +148,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
             }
 
             // 验证参数
-            validateContractParams(contractAddress, recipient, amount);
+            validateTrc10Params(contractAddress, recipient, amount);
 
             // 构建交易
             const transaction = await buildTrc10Transaction(contractAddress, recipient, amount, decimals);
@@ -151,7 +162,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
             const broadcastResult = await tronWeb.trx.sendRawTransaction(signedTx);
             console.log('TRC-10 合约广播结果:', broadcastResult);
             
-            const result: Trc10ContractResult = {
+            const result: Trc10TransferResult = {
                 originalTransaction: transaction,
                 signedTransaction: signedTx,
                 broadcastResult: broadcastResult,
@@ -160,8 +171,8 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                 signedAt: new Date().toISOString(),
                 address: account,
                 method: 'signTransaction',
-                contractAddress: contractAddress,
-                functionSelector: TRANSFER_FUNCTION_SELECTOR
+                tokenId: contractAddress,
+                tokenInfo: smartContractTokens.find(t => t.address === contractAddress)?.name || 'Unknown Token'
             };
             
             setTrc10TransferData(JSON.stringify(result, null, 2));
@@ -198,7 +209,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
             }
 
             // 验证参数
-            validateContractParams(contractAddress, recipient, amount);
+            validateTrc10Params(contractAddress, recipient, amount);
 
             // 构建交易
             const transaction = await buildTrc10Transaction(contractAddress, recipient, amount, decimals);
@@ -208,7 +219,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
             const result = await binanceW3W.tron.signAndSendTransaction(transaction);
             console.log('TRC-10 合约签名并发送结果:', result);
             
-            const contractResult: Trc10ContractResult = {
+            const contractResult: Trc10TransferResult = {
                 originalTransaction: transaction,
                 signedTransaction: result,
                 broadcastResult: result,
@@ -217,8 +228,8 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                 signedAt: new Date().toISOString(),
                 address: account,
                 method: 'signAndSendTransaction',
-                contractAddress: contractAddress,
-                functionSelector: TRANSFER_FUNCTION_SELECTOR
+                tokenId: contractAddress,
+                tokenInfo: smartContractTokens.find(t => t.address === contractAddress)?.name || 'Unknown Token'
             };
             
             setTrc10TransferData(JSON.stringify(contractResult, null, 2));
@@ -264,18 +275,41 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                 borderRadius: '8px',
                 marginBottom: '20px'
             }}>
-                <h3>TRC-10 智能合约交易</h3>
+                <h3>智能合约代币转账</h3>
                 <p style={{fontSize: '14px', color: '#666', marginBottom: '15px'}}>
-                    TRC-10 代币转账 (triggerSmartContract)
+                    通过智能合约调用 transfer 函数进行代币转账 (triggerSmartContract) - 支持 TRC-20 和带有智能合约功能的 TRC-10 代币
                 </p>
 
                 <div style={{marginBottom: '15px'}}>
-                    <label>合约地址:</label>
+                    <label>合约地址 (Contract Address):</label>
+                    <select
+                        value={contractAddress}
+                        onChange={(e) => {
+                            setContractAddress(e.target.value);
+                            const token = smartContractTokens.find(t => t.address === e.target.value);
+                            if (token) {
+                                setDecimals(token.decimals.toString());
+                            }
+                        }}
+                        style={{
+                            width: '100%',
+                            padding: '8px',
+                            marginTop: '5px',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd'
+                        }}
+                    >
+                        {smartContractTokens.map(token => (
+                            <option key={token.address} value={token.address}>
+                                {token.address} - {token.name} ({token.symbol})
+                            </option>
+                        ))}
+                    </select>
                     <input
                         type="text"
                         value={contractAddress}
                         onChange={handleContractAddressChange}
-                        placeholder="输入 TRC-10 合约地址"
+                        placeholder="或手动输入智能合约地址"
                         style={{
                             width: '100%',
                             padding: '8px',
@@ -353,7 +387,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                             cursor: loading ? 'not-allowed' : 'pointer'
                         }}
                     >
-                        {loading ? '处理中...' : 'TRC-10 signTransaction'}
+                        {loading ? '处理中...' : '智能合约 signTransaction'}
                     </button>
                     <button
                         onClick={signAndSendTrc10Transaction}
@@ -368,7 +402,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                             cursor: loading ? 'not-allowed' : 'pointer'
                         }}
                     >
-                        {loading ? '处理中...' : 'TRC-10 signAndSendTransaction'}
+                        {loading ? '处理中...' : '智能合约 signAndSendTransaction'}
                     </button>
                 </div>
             </div>
@@ -381,7 +415,7 @@ const Trc10ContractComponent: React.FC<Trc10ContractComponentProps> = ({
                     borderRadius: '8px',
                     marginBottom: '20px'
                 }}>
-                    <h3>TRC-10 合约交易结果</h3>
+                    <h3>智能合约代币交易结果</h3>
                     <pre style={{
                         backgroundColor: '#e9ecef',
                         padding: '10px',
