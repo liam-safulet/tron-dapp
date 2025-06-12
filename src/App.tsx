@@ -37,7 +37,7 @@ function App() {
     const [balance, setBalance] = useState<string>('0');
     const [loading, setLoading] = useState<boolean>(false);
     const [signedData, setSignedData] = useState<string>('');
-    const [recipient, setRecipient] = useState<string>('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
+    const [recipient, setRecipient] = useState<string>('TUaRyMRuzyX6tHZRoHz645PL1bn3E5NrWC');
     const [amount, setAmount] = useState<string>('0.1');
 
     // 添加消息签名相关状态
@@ -156,7 +156,7 @@ function App() {
             setBalance('0');
             setSignedData('');
             setSignedMessage('');
-            setRecipient('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
+            setRecipient('TUaRyMRuzyX6tHZRoHz645PL1bn3E5NrWC');
             setAmount('0.1');
             setMessage('Hello, Binance W3W!');
             alert('钱包已断开连接');

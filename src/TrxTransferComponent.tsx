@@ -28,7 +28,7 @@ const TrxTransferComponent: React.FC<TrxTransferComponentProps> = ({
     onBalanceUpdate
 }) => {
     const [loading, setLoading] = useState<boolean>(false);
-    const [trxRecipient, setTrxRecipient] = useState<string>('TASoYA4UCoQWZgtipn6sHZJkokiU7GTzkK');
+    const [trxRecipient, setTrxRecipient] = useState<string>('TUaRyMRuzyX6tHZRoHz645PL1bn3E5NrWC');
     const [trxAmount, setTrxAmount] = useState<string>('1.0');
     const [trxTransferData, setTrxTransferData] = useState<string>('');
 
