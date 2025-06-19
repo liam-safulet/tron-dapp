@@ -234,7 +234,8 @@ function App() {
 
             // 构建交易
             const transaction = await buildTransaction(recipient, amount);
-            console.log('Original transaction:', transaction);
+            console.log('Original transaction:');
+            console.log(JSON.stringify(transaction));
 
             // 使用 provider 签名交易
             const signedTx: any = await window.binancew3w.tron.signTransaction(transaction);
