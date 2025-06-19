@@ -2,6 +2,7 @@ import './App.css'
 import {useState, useEffect, useCallback} from 'react'
 import {TronWeb} from 'tronweb';
 import TrxTransferComponent from './TrxTransferComponent';
+import ApproveComponent from './ApproveComponent';
 
 declare global {
     interface Window {
@@ -466,7 +467,6 @@ function App() {
                         <p style={{fontSize: '14px', color: '#666', marginBottom: '15px'}}>
                             合约地址: {CONTRACT_ADDRESS}
                         </p>
-
                         <div style={{marginBottom: '15px'}}>
                             <label>接收地址:</label>
                             <input
@@ -500,7 +500,6 @@ function App() {
                                 }}
                             />
                         </div>
-
                         <div style={{display: 'flex', gap: '10px'}}>
                             <button
                                 onClick={signTransaction}
@@ -534,6 +533,12 @@ function App() {
                             </button>
                         </div>
                     </div>
+                    {/* USDT 授权 Approve 组件 */}
+                    <ApproveComponent
+                        account={account}
+                        tronWeb={tronWeb}
+                        binanceW3W={window.binancew3w}
+                    />
 
                     {/* TRX 转账组件 */}
                     <TrxTransferComponent 
