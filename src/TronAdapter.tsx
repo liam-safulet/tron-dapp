@@ -127,6 +127,7 @@ const TronAdapter: React.FC<TrxTransferComponentProps> = ({
         }
 
         if (adapter.address || '' === recipient) {
+            console.log({recipient, adapterAddress: adapter.address});
             throw new Error('发送地址和接收地址不能相同');
         }
     };
