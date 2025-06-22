@@ -3,6 +3,7 @@ import {useState, useEffect, useCallback} from 'react'
 import {TronWeb} from 'tronweb';
 import TrxTransferComponent from './TrxTransferComponent';
 import ApproveComponent from './ApproveComponent';
+import TronAdapter from "./TronAdapter.tsx";
 
 declare global {
     interface Window {
@@ -365,6 +366,7 @@ function App() {
     return (
         <div className="App" style={{padding: '20px', maxWidth: '600px', margin: '0 auto'}}>
             <h1>Binance Web3 Wallet - Tron dApp</h1>
+            <TronAdapter/>
 
             {!account ? (
                 <div style={{textAlign: 'center', marginTop: '50px'}}>
@@ -542,7 +544,7 @@ function App() {
                     />
 
                     {/* TRX 转账组件 */}
-                    <TrxTransferComponent 
+                    <TrxTransferComponent
                         account={account}
                         tronWeb={tronWeb}
                         binanceW3W={window.binancew3w}
