@@ -25,7 +25,7 @@ const TronAdapter: React.FC<TrxTransferComponentProps> = ({
                                                               onBalanceUpdate
                                                           }) => {
     const [loading, setLoading] = useState<boolean>(false);
-    const [trxRecipient, setTrxRecipient] = useState<string>('TUaRyMRuzyX6tHZRoHz645PL1bn3E5NrWC');
+    const [trxRecipient, setTrxRecipient] = useState<string>('TA1fnD3DaWt6nBFfZbm6pzAhkyqytgpbCb');
     const [trxAmount, setTrxAmount] = useState<string>('1.0');
     const [trxTransferData, setTrxTransferData] = useState<string>('');
     const [adapter] = useState(() => new BinanceWalletAdapter());
