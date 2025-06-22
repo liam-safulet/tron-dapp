@@ -7,6 +7,7 @@ import TronAdapter from "./TronAdapter.tsx";
 
 declare global {
     interface Window {
+        // @ts-expect-error 123
         binancew3w?: {
             tron: {
                 getAccount(): Promise<{ address: string }>;
@@ -366,7 +367,9 @@ function App() {
     return (
         <div className="App" style={{padding: '20px', maxWidth: '600px', margin: '0 auto'}}>
             <h1>Binance Web3 Wallet - Tron dApp</h1>
-            <TronAdapter/>
+            <TronAdapter
+                onBalanceUpdate={getBalance}
+                tronWeb={tronWeb}/>
 
             {!account ? (
                 <div style={{textAlign: 'center', marginTop: '50px'}}>

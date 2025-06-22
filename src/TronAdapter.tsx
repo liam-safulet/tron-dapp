@@ -4,7 +4,6 @@ import {BinanceWalletAdapter} from '@leibialreadytaken/tronwallet-adapter-binanc
 
 // TRX 转账组件的 Props 接口
 interface TrxTransferComponentProps {
-    account: string;
     tronWeb: TronWeb;
     onBalanceUpdate: (address: string) => Promise<void>;
 }
