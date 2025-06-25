@@ -30,8 +30,7 @@ interface TronTransaction {
 }
 
 const tronWeb = new TronWeb({
-    fullHost: 'https://api.trongrid.io', // 主网
-    // fullHost: 'https://api.nileex.io', // 测试网
+    fullHost: 'https://api.trongrid.io',
 });
 
 function App() {
@@ -367,9 +366,6 @@ function App() {
     return (
         <div className="App" style={{padding: '20px', maxWidth: '600px', margin: '0 auto'}}>
             <h1>Binance Web3 Wallet - Tron dApp</h1>
-            <TronAdapter
-                onBalanceUpdate={getBalance}
-                tronWeb={tronWeb}/>
 
             {!account ? (
                 <div style={{textAlign: 'center', marginTop: '50px'}}>
@@ -606,6 +602,10 @@ function App() {
                     )}
                 </div>
             )}
+
+            <TronAdapter
+                onBalanceUpdate={getBalance}
+                tronWeb={tronWeb}/>
         </div>
     );
 }

@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {TronWeb} from 'tronweb';
-import {BinanceWalletAdapter} from '@leibialreadytaken/tronwallet-adapter-binancewallet';
+import {BinanceWalletAdapter, openBinanceWallet} from '@leibialreadytaken/tronwallet-adapter-binancewallet';
 
 // TRX 转账组件的 Props 接口
 interface TrxTransferComponentProps {
@@ -261,6 +261,9 @@ const TronAdapter: React.FC<TrxTransferComponentProps> = ({
     // UI 部分保持不变
     return (
         <div>
+            <div onClick={() => openBinanceWallet()}>
+                open binance
+            </div>
             {/* TRX 转账表单 */}
             <div style={{
                 backgroundColor: '#f8f9fa',
