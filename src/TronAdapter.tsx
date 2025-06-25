@@ -263,7 +263,7 @@ const TronAdapter: React.FC<TrxTransferComponentProps> = ({
         <div>
             <div onClick={() => {
                 const a = openBinanceWallet()
-                console.log('start open binance', a);
+                console.log('start open binance', {a});
             }}>
                 open binance
             </div>
