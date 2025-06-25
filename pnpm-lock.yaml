@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@leibialreadytaken/tronwallet-adapter-binancewallet':
-        specifier: ^1.0.8
-        version: 1.0.8
+        specifier: ^1.0.9
+        version: 1.0.9
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
@@ -382,8 +382,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
 
-  '@leibialreadytaken/tronwallet-adapter-binancewallet@1.0.8':
-    resolution: {integrity: sha512-LXpyWmc8oFqQPjHdh8Ae3XNANGsDOrEpGc/CXr9V2KX7l/Y5DnhJm6FB3c45lWyt+ubUe0PIlQtRZk56b6acsg==}
+  '@leibialreadytaken/tronwallet-adapter-binancewallet@1.0.9':
+    resolution: {integrity: sha512-ohtGyhIjzNwGBUSXWsPHq+4vdLLHy/9lWMKMR+/HstLMssiBfVKBQGTHub6ZqPaGOoLHWvDm8SeVB4NdlJ+sVQ==}
     engines: {node: '>=16', pnpm: '>=7'}
 
   '@noble/curves@1.2.0':
@@ -1616,7 +1616,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@leibialreadytaken/tronwallet-adapter-binancewallet@1.0.8':
+  '@leibialreadytaken/tronwallet-adapter-binancewallet@1.0.9':
     dependencies:
       '@binance/w3w-utils': 1.1.6
       '@tronweb3/tronwallet-abstract-adapter': 1.1.9
