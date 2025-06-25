@@ -261,7 +261,10 @@ const TronAdapter: React.FC<TrxTransferComponentProps> = ({
     // UI 部分保持不变
     return (
         <div>
-            <div onClick={() => openBinanceWallet()}>
+            <div onClick={() => {
+                console.log('start open binance');
+                openBinanceWallet()
+            }}>
                 open binance
             </div>
             {/* TRX 转账表单 */}
