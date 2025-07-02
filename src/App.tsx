@@ -292,7 +292,7 @@ function App() {
             console.log('Signing message:', message);
 
             // 使用新的 provider 签名消息
-            const { signature } = await window.binancew3w.tron.signMessage(message);
+            const signature = await window.binancew3w.tron.signMessage(message);
 
             const signatureData = {
                 originalMessage: message,
