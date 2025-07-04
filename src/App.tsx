@@ -291,15 +291,24 @@ function App() {
 
             console.log('Signing message:', message);
 
-            // 使用新的 provider 签名消息
+            // 使用 provider 签名消息
             const signature = await window.binancew3w.tron.signMessage(message);
+
+            // 用 tronWeb 验证签名
+            let verifiedAddress = '';
+            try {
+                verifiedAddress = await tronWeb.trx.verifyMessageV2(message, signature);
+            } catch (e: any) {
+                verifiedAddress = '验证失败: ' + (e && typeof e === 'object' && 'message' in e ? (e as any).message : String(e));
+            }
 
             const signatureData = {
                 originalMessage: message,
                 signature: signature,
                 signedAt: new Date().toISOString(),
                 address: account,
-                method: 'binancew3w.tron.signMessage'
+                method: 'binancew3w.tron.signMessage',
+                verifiedAddress: verifiedAddress
             };
 
             setSignedMessage(JSON.stringify(signatureData, null, 2));
