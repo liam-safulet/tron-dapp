@@ -302,13 +302,17 @@ function App() {
                 verifiedAddress = '验证失败: ' + (e && typeof e === 'object' && 'message' in e ? (e as any).message : String(e));
             }
 
+            // 自动对比
+            const isMatch = account && verifiedAddress && account === verifiedAddress;
+
             const signatureData = {
                 originalMessage: message,
                 signature: signature,
                 signedAt: new Date().toISOString(),
                 address: account,
                 method: 'binancew3w.tron.signMessage',
-                verifiedAddress: verifiedAddress
+                verifiedAddress: verifiedAddress,
+                verified: isMatch ? '✅ 验证通过' : '❌ 验证失败'
             };
 
             setSignedMessage(JSON.stringify(signatureData, null, 2));
