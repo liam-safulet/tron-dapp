@@ -29,6 +29,10 @@ const TronAdapter: React.FC<TrxTransferComponentProps> = ({
     const [trxAmount, setTrxAmount] = useState<string>('1.0');
     const [trxTransferData, setTrxTransferData] = useState<string>('');
     const [adapter] = useState(() => new BinanceWalletAdapter());
+    const [message, setMessage] = useState<string>('Hello from Adapter!');
+    const [signature, setSignature] = useState<string>('');
+    const [verifiedAddress, setVerifiedAddress] = useState<string>('');
+    const [verifyResult, setVerifyResult] = useState<string>('');
 
     useEffect(() => {
         // 初始化 adapter
@@ -258,6 +262,42 @@ const TronAdapter: React.FC<TrxTransferComponentProps> = ({
         setTrxAmount(e.target.value);
     };
 
+    // 消息签名
+    const handleSignMessage = async () => {
+        if (!adapter.connected || !adapter.address) {
+            alert('请先连接钱包');
+            return;
+        }
+        try {
+            setLoading(true);
+            const sig = await adapter.signMessage(message);
+            setSignature(sig);
+        } catch (e: any) {
+            setSignature('签名失败: ' + (e && e.message ? e.message : String(e)));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 消息签名验证
+    const handleVerifyMessage = async () => {
+        if (!signature) {
+            alert('请先签名');
+            return;
+        }
+        try {
+            setLoading(true);
+            const addr = await tronWeb.trx.verifyMessageV2(message, signature);
+            setVerifiedAddress(addr);
+            setVerifyResult(addr === adapter.address ? '✅ 验证通过' : '❌ 验证失败');
+        } catch (e: any) {
+            setVerifiedAddress('');
+            setVerifyResult('验证异常: ' + (e && e.message ? e.message : String(e)));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // UI 部分保持不变
     return (
         <div>
@@ -372,6 +412,39 @@ const TronAdapter: React.FC<TrxTransferComponentProps> = ({
                     </pre>
                 </div>
             )}
+
+            {/* 消息签名与验证 */}
+            <div style={{ background: '#f8f9fa', padding: 15, borderRadius: 8, marginBottom: 20 }}>
+                <h3>消息签名与验证 (Adapter)</h3>
+                <div style={{ marginBottom: 10 }}>
+                    <label>要签名的消息: </label>
+                    <input
+                        type="text"
+                        value={message}
+                        onChange={e => setMessage(e.target.value)}
+                        style={{ width: '70%' }}
+                    />
+                    <button onClick={handleSignMessage} style={{ marginLeft: 8 }} disabled={loading || !adapter.connected}>
+                        {loading ? '签名中...' : '签名消息'}
+                    </button>
+                </div>
+                {signature && (
+                    <div style={{ marginBottom: 10 }}>
+                        <div><b>签名:</b> <span style={{ wordBreak: 'break-all' }}>{signature}</span></div>
+                    </div>
+                )}
+                <div style={{ marginBottom: 10 }}>
+                    <button onClick={handleVerifyMessage} disabled={loading || !adapter.connected || !signature}>
+                        {loading ? '验证中...' : '验证签名'}
+                    </button>
+                </div>
+                {verifiedAddress && (
+                    <div style={{ marginTop: 8 }}>
+                        <div><b>验证得到的地址:</b> {verifiedAddress}</div>
+                        <div><b>验证结果:</b> {verifyResult}</div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
