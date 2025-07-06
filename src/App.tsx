@@ -12,6 +12,7 @@ declare global {
             tron: {
                 getAccount(): Promise<{ address: string }>;
                 signMessage(message: string): Promise<string>;
+                signMessageV2(message: string | Uint8Array): Promise<string>;
                 signTransaction(tx: unknown): Promise<unknown>;
                 signAndSendTransaction(tx: unknown): Promise<{ txid?: string; result?: boolean }>;
                 disconnect(): Promise<void>;
@@ -292,7 +293,11 @@ function App() {
             console.log('Signing message:', message);
 
             // 使用 provider 签名消息
-            const signature = await window.binancew3w.tron.signMessage(message);
+            const signature = await window.binancew3w.tron.signMessageV2([
+                72, 101, 108, 108, 111,
+                44, 32, 84, 82, 79,
+                78, 33
+            ]);
 
             // 用 tronWeb 验证签名
             let verifiedAddress = '';
@@ -379,6 +384,7 @@ function App() {
     return (
         <div className="App" style={{padding: '20px', maxWidth: '600px', margin: '0 auto'}}>
             <h1>Binance Web3 Wallet - Tron dApp</h1>
+            <FrontEndSignAndVerifyMessage2/>
 
             {!account ? (
                 <div style={{textAlign: 'center', marginTop: '50px'}}>
