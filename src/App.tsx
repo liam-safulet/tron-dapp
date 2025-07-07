@@ -292,13 +292,18 @@ function App() {
 
             console.log('Signing message:', message);
 
+            const msg = [
+                72, 101, 108, 108, 111,
+                44, 32, 84, 82, 79,
+                78, 33
+            ]
             // 使用 provider 签名消息
-            const signature = await window.binancew3w.tron.signMessageV2(message);
+            const signature = await window.binancew3w.tron.signMessageV2(msg);
 
             // 用 tronWeb 验证签名
             let verifiedAddress = '';
             try {
-                verifiedAddress = await tronWeb.trx.verifyMessageV2(message, signature);
+                verifiedAddress = await tronWeb.trx.verifyMessageV2(msg, signature);
             } catch (e: any) {
                 verifiedAddress = '验证失败: ' + (e && typeof e === 'object' && 'message' in e ? (e as any).message : String(e));
             }
