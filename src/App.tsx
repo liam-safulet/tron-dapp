@@ -293,11 +293,7 @@ function App() {
             console.log('Signing message:', message);
 
             // 使用 provider 签名消息
-            const signature = await window.binancew3w.tron.signMessageV2([
-                72, 101, 108, 108, 111,
-                44, 32, 84, 82, 79,
-                78, 33
-            ]);
+            const signature = await window.binancew3w.tron.signMessageV2(message);
 
             // 用 tronWeb 验证签名
             let verifiedAddress = '';
