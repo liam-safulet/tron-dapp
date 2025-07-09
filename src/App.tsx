@@ -51,6 +51,9 @@ function App() {
     // transfer(address,uint256) 函数选择器
     const TRANSFER_FUNCTION_SELECTOR = 'a9059cbb';
 
+    // 添加签名类型选择
+    const [signType, setSignType] = useState<'v1' | 'v2'>('v1');
+
     // 检查钱包连接状态
     const checkWalletConnection = useCallback(async (): Promise<void> => {
         try {
@@ -292,8 +295,15 @@ function App() {
 
             console.log('Signing message:', message);
 
-            // 使用 provider 签名消息
-            const signature = await window.binancew3w.tron.signMessage(message);
+            let signature: string = '';
+            let method = '';
+            if (signType === 'v2' && typeof window.binancew3w.tron.signMessageV2 === 'function') {
+                signature = await window.binancew3w.tron.signMessageV2(message);
+                method = 'binancew3w.tron.signMessageV2';
+            } else {
+                signature = await window.binancew3w.tron.signMessage(message);
+                method = 'binancew3w.tron.signMessage';
+            }
 
             // 用 tronWeb 验证签名
             let verifiedAddress = '';
@@ -311,7 +321,7 @@ function App() {
                 signature: signature,
                 signedAt: new Date().toISOString(),
                 address: account,
-                method: 'binancew3w.tron.signMessage',
+                method: method,
                 verifiedAddress: verifiedAddress,
                 verified: isMatch ? '✅ 验证通过' : '❌ 验证失败'
             };
@@ -454,6 +464,14 @@ function App() {
                                     resize: 'vertical'
                                 }}
                             />
+                        </div>
+
+                        <div style={{marginBottom: '15px'}}>
+                            <label>签名类型：</label>
+                            <select value={signType} onChange={e => setSignType(e.target.value as 'v1' | 'v2')} style={{marginLeft: 8}}>
+                                <option value="v1">signMessage (V1)</option>
+                                <option value="v2">signMessageV2 (推荐)</option>
+                            </select>
                         </div>
 
                         <button
