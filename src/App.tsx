@@ -12,7 +12,7 @@ declare global {
             tron: {
                 getAccount(): Promise<{ address: string }>;
                 signMessage(message: string): Promise<string>;
-                signMessageV2(message: string | Uint8Array): Promise<string>;
+                signMessageV2(message: string): Promise<string>;
                 signTransaction(tx: unknown): Promise<unknown>;
                 signAndSendTransaction(tx: unknown): Promise<{ txid?: string; result?: boolean }>;
                 disconnect(): Promise<void>;
@@ -293,7 +293,7 @@ function App() {
             console.log('Signing message:', message);
 
             // 使用 provider 签名消息
-            const signature = await window.binancew3w.tron.signMessageV2(message);
+            const signature = await window.binancew3w.tron.signMessage(message);
 
             // 用 tronWeb 验证签名
             let verifiedAddress = '';
