@@ -282,7 +282,7 @@ function App() {
     // 签名消息 - 添加签名验证
     const signMessage = async (): Promise<void> => {
         if (!account || !message.trim()) {
-            alert('请确保钱包已连接且消息不为空');
+            alert('请确保钱包已连接且消息不为空1');
             return;
         }
 
