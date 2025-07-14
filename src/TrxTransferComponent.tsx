@@ -213,7 +213,7 @@ const TrxTransferComponent: React.FC<TrxTransferComponentProps> = ({
                 signedTransaction: result,
                 broadcastResult: result,
                 txid: result.txid,
-                success: result.result || false,
+                success: result.wcResult.result || false,
                 signedAt: new Date().toISOString(),
                 address: account,
                 method: 'signAndSendTransaction'
