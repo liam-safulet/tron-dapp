@@ -1,5 +1,17 @@
 import './App.css'
 import { useState } from 'react'
+import { createConfig, http, custom } from 'wagmi'
+import { mainnet, sepolia } from 'wagmi/chains'
+import { injected, metaMask, walletConnect, coinbaseWallet } from 'wagmi/connectors'
+import { 
+  WagmiProvider, 
+  useAccount, 
+  useConnect, 
+  useDisconnect,
+  useBalance,
+  useChainId,
+  usePublicClient
+} from 'wagmi'
 
 // 声明 window.ethereum 类型
 declare global {
@@ -8,67 +20,67 @@ declare global {
   }
 }
 
+// 创建使用 window.ethereum 的自定义传输
+const createEthereumTransport = () => {
+  if (typeof window !== 'undefined' && window.ethereum) {
+    console.log('✅ 使用 window.ethereum 作为 RPC 提供者')
+    return custom({
+      request: async ({ method, params }) => {
+        console.log('🚀 通过 window.ethereum.request 发送 RPC 请求:', { method, params })
+        // 直接使用 window.ethereum.request
+        const result = await window.ethereum.request({ method, params })
+        console.log('📡 RPC 响应:', result)
+        return result
+      },
+    })
+  }
+  
+  console.log('⚠️ 未检测到 window.ethereum，使用默认 HTTP 传输')
+  // 如果没有 window.ethereum，使用默认的 HTTP 传输
+  return http()
+}
+
+// 创建 wagmi 配置
+const config = createConfig({
+  chains: [mainnet, sepolia],
+  connectors: [
+    injected(),
+    metaMask(),
+    walletConnect({
+      projectId: 'YOUR_PROJECT_ID', // 需要替换为你的 WalletConnect Project ID
+    }),
+    coinbaseWallet({
+      appName: 'Wagmi RPC Example App',
+    }),
+  ],
+  transports: {
+    [mainnet.id]: createEthereumTransport(),
+    [sepolia.id]: createEthereumTransport(),
+  },
+})
+
 // RPC 请求示例组件
 const RPCExample = () => {
   const [rpcResult, setRpcResult] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [rpcMethod, setRpcMethod] = useState('eth_blockNumber')
   const [rpcParams, setRpcParams] = useState('[]')
-  const [isConnected, setIsConnected] = useState(false)
-  const [address, setAddress] = useState<string>('')
+  const { address, isConnected } = useAccount()
+  const { data: balance } = useBalance({
+    address,
+  })
+  const chainId = useChainId()
+  const publicClient = usePublicClient()
 
-  // 连接钱包
-  const connectWallet = async () => {
-    if (!window.ethereum) {
-      alert('请安装 MetaMask 钱包')
-      return
-    }
-
-    try {
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      })
-      
-      if (accounts.length > 0) {
-        setAddress(accounts[0])
-        setIsConnected(true)
-        alert('钱包连接成功！')
-      }
-    } catch (error) {
-      console.error('连接钱包失败:', error)
-      alert('连接钱包失败')
-    }
-  }
-
-  // 断开连接
-  const disconnectWallet = () => {
-    setAddress('')
-    setIsConnected(false)
-    setRpcResult('')
-    alert('钱包已断开连接')
-  }
-
-  // 自定义 RPC 请求函数
-  const requestRPC = async (method: string, params: any[] = []) => {
-    if (!window.ethereum) {
-      throw new Error('MetaMask not found')
-    }
-
-    try {
-      const result = await window.ethereum.request({
-        method,
-        params,
-      })
-      return result
-    } catch (error) {
-      throw error
-    }
-  }
-
-  // 执行 RPC 请求
+  // 通过 wagmi 的 publicClient 执行 RPC 请求
   const executeRPC = async () => {
     if (!isConnected) {
       alert('请先连接钱包')
+      return
+    }
+
+    if (!publicClient) {
+      alert('Public client 未初始化')
       return
     }
 
@@ -83,20 +95,29 @@ const RPCExample = () => {
         console.warn('参数解析失败，使用空数组')
       }
 
-      const result = await requestRPC(rpcMethod, params)
+      // 使用 wagmi 的 publicClient 发送 RPC 请求
+      console.log('🔧 通过 wagmi publicClient 发送 RPC 请求')
+      const result = await publicClient.request({
+        method: rpcMethod as any,
+        params: params as any,
+      })
+      
+      console.log('✅ RPC 请求完成，结果:', result)
       
       setRpcResult(JSON.stringify({
         method: rpcMethod,
         params: params,
         result: result,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        chainId: chainId
       }, null, 2))
     } catch (error) {
       setRpcResult(JSON.stringify({
         error: error instanceof Error ? error.message : 'Unknown error',
         method: rpcMethod,
         params: rpcParams,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        chainId: chainId
       }, null, 2))
     } finally {
       setLoading(false)
@@ -134,6 +155,16 @@ const RPCExample = () => {
       name: '获取账户数量',
       method: 'eth_accounts',
       params: '[]'
+    },
+    {
+      name: '获取最新区块',
+      method: 'eth_getBlockByNumber',
+      params: '["latest", false]'
+    },
+    {
+      name: '获取交易收据',
+      method: 'eth_getTransactionReceipt',
+      params: '["0x0000000000000000000000000000000000000000000000000000000000000000"]'
     }
   ]
 
@@ -144,7 +175,7 @@ const RPCExample = () => {
 
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <h1>Ethereum RPC 请求示例</h1>
+      <h1>Wagmi RPC 请求示例</h1>
       
       {/* 钱包连接状态 */}
       <div style={{
@@ -156,36 +187,8 @@ const RPCExample = () => {
         <h3>钱包状态</h3>
         <p><strong>连接状态:</strong> {isConnected ? '✅ 已连接' : '❌ 未连接'}</p>
         {address && <p><strong>地址:</strong> {address}</p>}
-        
-        {!isConnected ? (
-          <button
-            onClick={connectWallet}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            连接 MetaMask
-          </button>
-        ) : (
-          <button
-            onClick={disconnectWallet}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            断开连接
-          </button>
-        )}
+        {balance && <p><strong>余额:</strong> {balance.formatted} {balance.symbol}</p>}
+        <p><strong>当前链 ID:</strong> {chainId}</p>
       </div>
 
       {/* RPC 请求表单 */}
@@ -195,7 +198,10 @@ const RPCExample = () => {
         borderRadius: '8px',
         marginBottom: '20px'
       }}>
-        <h3>RPC 请求</h3>
+        <h3>RPC 请求 (通过 Wagmi)</h3>
+        <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+          所有 RPC 请求都通过 wagmi 的 publicClient 发送
+        </p>
         
         <div style={{ marginBottom: '15px' }}>
           <label>RPC 方法:</label>
@@ -320,12 +326,79 @@ const RPCExample = () => {
   )
 }
 
+// 钱包连接组件
+const WalletConnect = () => {
+  const { address, isConnected } = useAccount()
+  const { connect, connectors } = useConnect()
+  const { disconnect } = useDisconnect()
+  const chainId = useChainId()
+
+  return (
+    <div style={{
+      backgroundColor: '#f8f9fa',
+      padding: '15px',
+      borderRadius: '8px',
+      marginBottom: '20px'
+    }}>
+      <h3>连接钱包</h3>
+      
+      {isConnected ? (
+        <div>
+          <p><strong>已连接地址:</strong> {address}</p>
+          <p><strong>当前链 ID:</strong> {chainId}</p>
+          
+          <button
+            onClick={() => disconnect()}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            断开连接
+          </button>
+        </div>
+      ) : (
+        <div>
+          {connectors.map((connector) => (
+            <button
+              key={connector.id}
+              onClick={() => connect({ connector })}
+              disabled={!connector.ready}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '10px',
+                marginBottom: '8px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: connector.ready ? 'pointer' : 'not-allowed'
+              }}
+            >
+              {connector.name}
+              {!connector.ready && ' (未安装)'}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // 主应用组件
 function App() {
   return (
-    <div className="App">
-      <RPCExample />
-    </div>
+    <WagmiProvider config={config}>
+      <div className="App">
+        <WalletConnect />
+        <RPCExample />
+      </div>
+    </WagmiProvider>
   )
 }
 
