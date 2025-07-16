@@ -12,6 +12,7 @@ import {
   useChainId,
   usePublicClient
 } from 'wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // 声明 window.ethereum 类型
 declare global {
@@ -58,6 +59,9 @@ const config = createConfig({
     [sepolia.id]: createEthereumTransport(),
   },
 })
+
+// 创建 QueryClient 实例
+const queryClient = new QueryClient()
 
 // RPC 请求示例组件
 const RPCExample = () => {
@@ -393,12 +397,14 @@ const WalletConnect = () => {
 // 主应用组件
 function App() {
   return (
-    <WagmiProvider config={config}>
-      <div className="App">
-        <WalletConnect />
-        <RPCExample />
-      </div>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <WagmiProvider config={config}>
+        <div className="App">
+          <WalletConnect />
+          <RPCExample />
+        </div>
+      </WagmiProvider>
+    </QueryClientProvider>
   )
 }
 

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@leibialreadytaken/tronwallet-adapter-binancewallet": "1.0.14",
+    "@tanstack/react-query": "^5.83.0",
     "bip39": "^3.1.0",
     "buffer": "^6.0.3",
     "hdkey": "^2.1.0",

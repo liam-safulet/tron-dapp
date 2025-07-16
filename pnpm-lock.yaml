@@ -11,6 +11,9 @@ importers:
       '@leibialreadytaken/tronwallet-adapter-binancewallet':
         specifier: 1.0.14
         version: 1.0.14(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@tanstack/react-query':
+        specifier: ^5.83.0
+        version: 5.83.0(react@19.1.0)
       bip39:
         specifier: ^3.1.0
         version: 3.1.0
