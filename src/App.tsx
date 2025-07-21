@@ -51,6 +51,7 @@ function App() {
     // transfer(address,uint256) 函数选择器
     const TRANSFER_FUNCTION_SELECTOR = 'a9059cbb';
 
+    console.log(1);
     // 添加签名类型选择
     const [signType, setSignType] = useState<'v1' | 'v2'>('v1');
 
